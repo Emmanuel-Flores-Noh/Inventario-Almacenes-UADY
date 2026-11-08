@@ -1,0 +1,14 @@
+sequenceDiagram
+    autonumber
+    participant C as Sistema 2 (Cliente)
+    participant B as Broker (Intermediario)
+    participant P as Sistema 1 (Proveedor Centralizado)
+
+    Note over C,P: Intercambio de mensajes JSON sobre Sockets TCP
+    
+    C->>B: Envía Solicitud JSON<br/>(id, servicio, operación, parámetros, fecha)
+    B->>B: Identifica la operación requerida<br/>y busca al proveedor en su Registro
+    B->>P: Reenvía Solicitud JSON al proveedor adecuado
+    P->>P: Ejecuta lógica de negocio<br/>(Ej. Actualizar tienda y vincular QR)
+    P->>B: Emite Respuesta JSON<br/>(id, resultado, estado, mensaje de error, fecha)
+    B->>C: Devuelve la Respuesta JSON al cliente original

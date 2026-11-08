@@ -1,0 +1,54 @@
+erDiagram
+    ROLES ||--o{ USUARIOS : "asigna"
+    USUARIOS ||--o{ VENTAS : "solicita"
+    PRODUCTOS ||--o{ MERCANCIA : "agrupa"
+    PRODUCTOS ||--o{ HISTORIAL_PRECIO : "audita"
+    MERCANCIA ||--o| VENTAS : "se vincula a"
+    TIENDAS_ALMACENES ||--o{ VENTAS : "recibe"
+
+    ROLES {
+        int id_rol PK
+        string nombre_rol
+        string descripcion
+    }
+
+    USUARIOS {
+        int id_usuario PK
+        int id_rol FK
+        string nombre_razon_social
+    }
+
+    PRODUCTOS {
+        int id_producto PK
+        string nombre
+        string descripcion
+        decimal precio_actual
+    }
+
+    HISTORIAL_PRECIO {
+        int id_historial PK
+        int id_producto FK
+        decimal precio_historico
+        datetime fecha_cambio
+    }
+
+    MERCANCIA {
+        string numero_serie PK
+        int id_producto FK
+        string estado
+        string ruta_qr
+    }
+
+    TIENDAS_ALMACENES {
+        int id_tienda PK
+        string nombre
+        string direccion
+    }
+
+    VENTAS {
+        int id_venta PK
+        string numero_serie FK
+        int id_tienda FK
+        int id_usuario FK
+        datetime fecha_venta
+    }

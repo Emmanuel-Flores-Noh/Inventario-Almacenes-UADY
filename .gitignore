@@ -1,6 +1,51 @@
+### docs generator ###
 .venv/
 bin/node_modules/
 bin/package-lock.json
 bin/pnpm-lock.yaml
 __pycache__/
 *.py[cod]
+
+### Proyecto broker ###
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/.gitkeep
+!**/src/test/**/.gitkeep
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+### Documentacion ###
+!docs/out/
+
+### Eclipse ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbattrs.xml
+/build/
+
+### VS Code ###
+.vscode/
+
+### OS files ###
+.DS_Store
+Thumbs.db
+
+### Logs & DB runtime ###
+*.log
+docker/mariadb/data/
+>>>>>>> 5dd629d (Arquitectura y configuracion inicial)
