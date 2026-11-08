@@ -1,0 +1,42 @@
+#!/bin/bash
+
+echo "=================================================="
+echo " Ejecutando compilación de Documentos y Diagramas "
+echo "=================================================="
+
+# 1. Detectar el sistema operativo
+OS="$(uname -s)"
+case "${OS}" in
+    Linux*|Darwin*)
+        echo "Entorno detectado: Linux/macOS"
+        ./procesar-docs.sh
+        RESULT=$?
+        ;;
+    CYGWIN*|MINGW*|MSYS*)
+        echo "Entorno detectado: Windows"
+        # Llamamos al intérprete de Windows
+        cmd.exe /c "procesar-docs.cmd"
+        RESULT=$?
+        ;;
+    *)
+        echo "Entorno no reconocido (${OS}), asumiendo Linux..."
+        ./procesar-docs.sh
+        RESULT=$?
+        ;;
+esac
+
+# 2. Evaluar el resultado de la ejecución
+if [ $RESULT -ne 0 ]; then
+    echo ""
+    echo "[ERROR] La compilación falló. El commit ha sido abortado."
+    echo "Por favor, revisa los errores arriba e inténtalo de nuevo."
+    exit 1
+fi
+
+echo ""
+echo "[ÉXITO] Documentos compilados correctamente. Procediendo con el commit..."
+
+# 3. Añadir los archivos generados al commit actual
+git add docs/
+
+exit 0

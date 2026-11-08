@@ -1,0 +1,35 @@
+FROM python:3.11-slim
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalar Node.js, Chromium, y las librerías del sistema necesarias para WeasyPrint
+RUN apt-get update && apt-get install -y \
+    nodejs \
+    npm \
+    chromium \
+    fonts-liberation \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libcairo2 \
+    libffi-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Instalar dependencias globales de Node y Python
+RUN npm install -g @mermaid-js/mermaid-cli
+RUN pip install --no-cache-dir markdown weasyprint
+
+WORKDIR /app
+
+# Copiar ambos scripts al contenedor
+COPY procesar_diagramas.py /app/
+COPY procesar_markdown.py /app/
+
+# Crear un pequeño script bash de orquestación directamente en el contenedor
+RUN echo '#!/bin/bash\n\
+echo "--- PROCESANDO DIAGRAMAS ---"\n\
+python procesar_diagramas.py "$1"\n\
+echo "\n--- PROCESANDO MARKDOWN ---"\n\
+python procesar_markdown.py "$1"' > /app/run_all.sh && chmod +x /app/run_all.sh
+
+ENTRYPOINT ["/app/run_all.sh"]
+CMD ["/docs"]
