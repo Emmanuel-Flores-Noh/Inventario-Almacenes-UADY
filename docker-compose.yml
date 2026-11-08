@@ -1,0 +1,94 @@
+services:
+  # Base de datos relacional MariaDB
+  mariadb:
+    image: mariadb:11.4
+    container_name: uady-mariadb
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secret
+      MYSQL_DATABASE: almacenes_uady
+      MYSQL_USER: uady_user
+      MYSQL_PASSWORD: uady_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./docker/mariadb/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-proot_secret"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - uady-net
+
+  # Intermediario - Broker de servicios y comunicaciones TCP
+  broker:
+    build:
+      context: .
+      dockerfile: broker/Dockerfile
+    container_name: uady-broker
+    restart: unless-stopped
+    environment:
+      BROKER_PORT: 5000
+    ports:
+      - "5000:5000"
+    networks:
+      - uady-net
+
+  # Sistema 1 - Sistema Centralizado / Proveedor (Backend + QR + Persistencia)
+  sistema-centralizado:
+    build:
+      context: .
+      dockerfile: sistema-centralizado/Dockerfile
+    container_name: uady-sistema-centralizado
+    restart: unless-stopped
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: almacenes_uady
+      DB_USER: uady_user
+      DB_PASSWORD: uady_pass
+      BROKER_HOST: broker
+      BROKER_PORT: 5000
+      SERVICE_PORT: 6000
+    ports:
+      - "6000:6000"
+    volumes:
+      - qr_storage:/app/storage/qr
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      broker:
+        condition: service_started
+    networks:
+      - uady-net
+
+  # Sistema 2 - Cliente del Proveedor (Interfaz Desktop Swing / FlatLaf)
+  sistema-cliente:
+    build:
+      context: .
+      dockerfile: sistema-cliente/Dockerfile
+    container_name: uady-sistema-cliente
+    environment:
+      BROKER_HOST: broker
+      BROKER_PORT: 5000
+      DISPLAY: ${DISPLAY:-:0}
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+    depends_on:
+      broker:
+        condition: service_started
+    networks:
+      - uady-net
+    profiles:
+      - client
+      - all
+
+networks:
+  uady-net:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+  qr_storage:
