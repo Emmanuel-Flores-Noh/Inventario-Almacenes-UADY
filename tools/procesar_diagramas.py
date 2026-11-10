@@ -26,6 +26,24 @@ def preparar_puppeteer(docs_dir):
         json.dump(config_data, f, indent=4)
     return config_path
 
+def compilar_diagrama(archivo, ruta_png, ruta_pdf, config_puppeteer):
+    """Compila un único archivo .mmd a PNG y PDF."""
+    nombre_base = os.path.basename(archivo).replace(".mmd", "")
+
+    print(f"Convirtiendo diagrama: {nombre_base}.mmd ...")
+
+    try:
+        # Generar PNG (agregamos el -p con la ruta de configuración)
+        subprocess.run(["mmdc", "-p", config_puppeteer, "-i", archivo, "-o", ruta_png, "-b", "transparent"], check=True)
+        # Generar PDF
+        subprocess.run(["mmdc", "-p", config_puppeteer, "-i", archivo, "-o", ruta_pdf, "-b", "transparent"], check=True)
+
+        print(f"    -> Guardados en {os.path.dirname(ruta_png)} y {os.path.dirname(ruta_pdf)}")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"    [Error] Falló la conversión de {nombre_base}.mmd: {e}")
+        return False
+
 def procesar_diagramas(DIR_DIAGRAMAS, OUT_PNG, OUT_PDF, config_puppeteer):
     archivos_mmd = glob.glob(os.path.join(DIR_DIAGRAMAS, "*.mmd"))
     
@@ -38,17 +56,7 @@ def procesar_diagramas(DIR_DIAGRAMAS, OUT_PNG, OUT_PDF, config_puppeteer):
         ruta_png = os.path.join(OUT_PNG, f"{nombre_base}.png")
         ruta_pdf = os.path.join(OUT_PDF, f"{nombre_base}.pdf")
 
-        print(f"Convirtiendo diagrama: {nombre_base}.mmd ...")
-        
-        try:
-            # Generar PNG (agregamos el -p con la ruta de configuración)
-            subprocess.run(["mmdc", "-p", config_puppeteer, "-i", archivo, "-o", ruta_png, "-b", "transparent"], check=True)
-            # Generar PDF
-            subprocess.run(["mmdc", "-p", config_puppeteer, "-i", archivo, "-o", ruta_pdf, "-b", "transparent"], check=True)
-            
-            print(f"    -> Guardados en {OUT_PNG} y {OUT_PDF}")
-        except subprocess.CalledProcessError as e:
-            print(f"    [Error] Falló la conversión de {nombre_base}.mmd: {e}")
+        compilar_diagrama(archivo, ruta_png, ruta_pdf, config_puppeteer)
 
 def main():
     if faltan_dependencias():
