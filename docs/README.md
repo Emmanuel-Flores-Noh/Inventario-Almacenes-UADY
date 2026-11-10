@@ -18,6 +18,17 @@ El script se encarga de resolver el nombre del diagrama encontrandolo en la carp
 
 Si se desea, se pueden incrustar varios documentos markdown para simular saltos de pagina.
 
+### Fórmulas matemáticas en LaTeX
+Puedes incluir fórmulas matemáticas directamente en el Markdown:
+* **En línea (inline):** usando `$ ... $` o `\( ... \)`. Ejemplo: `$E = mc^2$`
+* **En bloque (display):** usando `$$ ... $$`, `\[ ... \]`, o bloques de código ```math. Ejemplo:
+  ```latex
+  $$
+  \int_{-\infty}^{\infty} e^{-x^2} dx = \sqrt{\pi}
+  $$
+  ```
+Las fórmulas se compilan a gráficos vectoriales SVG incrustados con resolución nítida.
+
 ### Convencion de documentos
 * Si solo se tiene un archivo markdown dentro de un subdirectorio se debe de llamar README.md
 * Si se poseen varios archivos markdown se debe de llamar $numeroDeDocumento$_$nombreDescriptivo$.md siendo numeroDeDocumento el numero que define en que orden se insertan, preferente nombrarlo 01, 02, etc.

@@ -8,6 +8,7 @@ Está diseñado para funcionar de manera **100% portable** a través de Docker, 
 
 - **Cero dependencias locales**: Todo corre dentro de un contenedor Docker (incluye Python, Node.js, Chromium y WeasyPrint).
 - **Soporte nativo para Mermaid**: Escribe diagramas en `.mmd` y el sistema los convierte a PNG y PDF de forma transparente.
+- **Soporte para fórmulas LaTeX**: Soporte para ecuaciones matemáticas en línea (`$formula$`) y en bloque (`$$formula$$`, `\[formula\]` o ````math````) convertidas a vectores SVG nítidos.
 - **Diseño profesional**: Los PDFs generados usan la fuente *Inter* de Google Fonts y colores de la paleta Slate de Tailwind.
 - **Multidocumento y saltos de página**: Puedes dividir un documento en múltiples archivos `.md` y el sistema los unirá insertando un salto de página entre cada uno.
 - **Git Hooks integrados**: Se compila automáticamente antes de cada `git commit`, asegurando que el código y los PDFs finales estén siempre sincronizados.
@@ -36,6 +37,7 @@ Para que el compilador funcione correctamente, debes respetar la siguiente estru
 ├── tools/                    # Las herramientas necesarias para los documentos
 │   ├── Dockerfile            # Configuracion del contenedor
 │   ├── procesar_diagramas.py # Script compilador de Mermaid
+│   ├── procesar_latex.py     # Script y módulo para procesamiento de LaTeX
 │   └── procesar_markdown.py  # Script compilador de WeasyPrint
 ├── procesar-docs.cmd         # Lanzador para Windows
 └── procesar-docs.sh          # Lanzador para Linux/macOS

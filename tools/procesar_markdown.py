@@ -5,6 +5,7 @@ import sys
 from sys import argv
 import markdown
 from weasyprint import HTML
+from procesar_latex import procesar_latex_en_markdown
 
 def reemplazar_diagramas_por_png(match, dir_png):
     alt_text = match.group(1)
@@ -66,6 +67,9 @@ def procesar_markdown(DOCS_DIR):
         # Reemplazar inyectando el path de la carpeta PNG
         contenido_procesado = re.sub(patron_mmd, lambda match: reemplazar_diagramas_por_png(match, DIR_PNG), contenido_md)
         
+        # Procesar fórmulas matemáticas LaTeX (inline y en bloques)
+        contenido_procesado = procesar_latex_en_markdown(contenido_procesado)
+        
         # Convertir Markdown a HTML
         html_body = markdown.markdown(contenido_procesado, extensions=['fenced_code', 'tables'])
         
@@ -124,6 +128,46 @@ def procesar_markdown(DOCS_DIR):
                     display: block; 
                     margin: 2em auto; 
                     border-radius: 8px; /* Pequeño toque estético para imágenes */
+                }}
+                
+                /* Estilos para fórmulas matemáticas LaTeX (inline y bloques) */
+                .math-inline {{
+                    display: inline;
+                    white-space: nowrap;
+                    line-height: normal;
+                }}
+                
+                img.math-inline-img {{
+                    display: inline-block !important;
+                    vertical-align: -0.22em !important;
+                    margin: 0 0.15em !important;
+                    max-height: 1.6em;
+                    width: auto;
+                    border-radius: 0 !important;
+                }}
+                
+                .math-block {{
+                    display: block;
+                    text-align: center;
+                    margin: 1.4em auto;
+                    page-break-inside: avoid;
+                }}
+                
+                img.math-block-img {{
+                    display: inline-block !important;
+                    margin: 0 auto !important;
+                    max-width: 100%;
+                    height: auto;
+                    border-radius: 0 !important;
+                }}
+                
+                .math-error {{
+                    color: #dc2626;
+                    background-color: #fee2e2;
+                    padding: 2px 4px;
+                    border-radius: 4px;
+                    font-family: "Courier New", Courier, monospace;
+                    font-size: 9pt;
                 }}
                 
                 ul, ol {{

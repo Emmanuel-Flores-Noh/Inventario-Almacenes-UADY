@@ -16,12 +16,13 @@ RUN apt-get update && apt-get install -y \
 
 # Instalar dependencias globales de Node y Python
 RUN npm install -g @mermaid-js/mermaid-cli
-RUN pip install --no-cache-dir markdown weasyprint
+RUN pip install --no-cache-dir markdown weasyprint ziamath
 
 WORKDIR /app
 
-# Copiar ambos scripts al contenedor
+# Copiar scripts al contenedor
 COPY procesar_diagramas.py /app/
+COPY procesar_latex.py /app/
 COPY procesar_markdown.py /app/
 
 # Crear un pequeño script bash de orquestación directamente en el contenedor
