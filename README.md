@@ -6,7 +6,7 @@ Está diseñado para funcionar de manera **100% portable** a través de Docker, 
 
 ## Características
 
-- **Cero dependencias locales**: Todo corre dentro de un contenedor Docker (incluye Python, Node.js, Chromium y WeasyPrint).
+- **Dos formas de ejecución**: Docker con todo incluido, o un entorno local aislado con `.venv` y Mermaid CLI instalado dentro del proyecto.
 - **Soporte nativo para Mermaid**: Escribe diagramas en `.mmd` y el sistema los convierte a PNG y PDF de forma transparente.
 - **Soporte para fórmulas LaTeX**: Soporte para ecuaciones matemáticas en línea (`$formula$`) y en bloque (`$$formula$$`, `\[formula\]` o ````math````) convertidas a vectores SVG nítidos.
 - **Diseño profesional**: Los PDFs generados usan la fuente *Inter* de Google Fonts y colores de la paleta Slate de Tailwind.
@@ -23,6 +23,8 @@ Para que el compilador funcione correctamente, debes respetar la siguiente estru
 ```text
 /
 ├── .githooks/                # Scripts de automatización de Git
+├── .venv/                    # Entorno virtual local de Python (generado)
+├── bin/                      # Mermaid CLI local (generado por setup-local)
 ├── diagramas/                # Archivos de Mermaid (.mmd) van aquí
 ├── markdown/                 # Documentos
 │   └── Proyecto_A/           # El nombre de esta subcarpeta será el nombre del PDF final
@@ -39,14 +41,87 @@ Para que el compilador funcione correctamente, debes respetar la siguiente estru
 │   ├── procesar_diagramas.py # Script compilador de Mermaid
 │   ├── procesar_latex.py     # Script y módulo para procesamiento de LaTeX
 │   └── procesar_markdown.py  # Script compilador de WeasyPrint
-├── procesar-docs.cmd         # Lanzador para Windows
-└── procesar-docs.sh          # Lanzador para Linux/macOS
+├── requirements.txt          # Dependencias Python para el entorno local
+├── setup-local.cmd           # Instalador local para Windows
+├── setup-local.sh            # Instalador local para Linux/macOS
+├── procesar-docs.cmd         # Lanzador Docker para Windows
+├── procesar-docs.sh          # Lanzador Docker para Linux/macOS
+├── procesar-docs-local.cmd   # Lanzador local para Windows
+└── procesar-docs-local.sh    # Lanzador local para Linux/macOS
 ```
 
 ## Requisitos
 
+### Opción Docker
+
 - Docker
 - Git
+
+### Opción local
+
+- Python 3
+- Node.js 18.19 o superior y npm
+- Git
+- En Linux, las librerías del sistema que requiere WeasyPrint (Pango, Cairo y FFI)
+
+## Instalación
+
+### Opción 1: Docker (recomendada)
+
+```bash
+./procesar-docs.sh
+```
+
+En Windows:
+
+```bat
+procesar-docs.cmd
+```
+
+### Opción 2: Entorno local aislado
+
+Esta alternativa no usa Docker. Crea un `.venv` de Python e instala Mermaid CLI
+dentro de la carpeta `bin/` del proyecto.
+
+En Linux/macOS:
+
+```bash
+./setup-local.sh
+./procesar-docs-local.sh
+```
+
+En Windows:
+
+```bat
+setup-local.cmd
+procesar-docs-local.cmd
+```
+
+También puedes procesar un solo documento:
+
+```bash
+./procesar-docs-local.sh docs/markdown/Proyecto_A
+./procesar-docs-local.sh docs/markdown/Proyecto_A/01-inicio.md
+```
+
+`setup-local` instala las dependencias de `requirements.txt` en `.venv`, instala
+`@mermaid-js/mermaid-cli` en `bin/node_modules` y verifica el navegador que usará
+Puppeteer. Los scripts de Python buscan `mmdc` primero en el `PATH` del sistema,
+luego en `bin/mmdc` y finalmente en `bin/node_modules/.bin/mmdc`.
+
+Puedes forzar una ruta específica con:
+
+```bash
+export MMDC_PATH=/ruta/a/mmdc
+export PUPPETEER_EXECUTABLE_PATH=/ruta/a/chrome
+```
+
+Si WeasyPrint falla al importarse en Debian/Ubuntu, instala las librerías del
+sistema con:
+
+```bash
+sudo apt install libpango-1.0-0 libpangoft2-1.0-0 libcairo2 libffi-dev
+```
 
 ## Configuracion
 

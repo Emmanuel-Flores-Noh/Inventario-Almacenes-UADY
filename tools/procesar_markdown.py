@@ -284,8 +284,9 @@ def compilar_diagramas_requeridos(archivos_md, docs_dir, subcarpeta):
         return
 
     if faltan_dependencias():
-        print("  [Advertencia] Se necesita mermaid CLI para compilar los diagramas.")
-        print("  Instálalo con: sudo npm install -g @mermaid-js/mermaid-cli")
+        print("  [Advertencia] Se necesita Mermaid CLI para compilar los diagramas.")
+        print("  Opción local: ejecuta ./setup-local.sh (Linux/macOS) o setup-local.cmd (Windows).")
+        print("  Opción global: sudo npm install -g @mermaid-js/mermaid-cli")
         return
 
     preparar_directorios([out_png, out_pdf])
