@@ -3,6 +3,7 @@ import re
 import glob
 import sys
 from sys import argv
+from pathlib import Path
 import markdown
 from weasyprint import HTML
 from procesar_latex import procesar_latex_en_markdown
@@ -19,7 +20,47 @@ def reemplazar_diagramas_por_png(match, dir_png):
     if not os.path.exists(ruta_png):
         print(f"  [Advertencia] No se encontró el PNG compilado para: {nombre_base}.mmd en la ruta {ruta_png}")
         
-    return f'![{alt_text}](file://{ruta_png})'
+    return f'![{alt_text}]({Path(ruta_png).as_uri()})'
+
+def reemplazar_imagenes_locales(match, subcarpeta):
+    alt_text = match.group(1)
+    target = match.group(2).strip()
+
+    # Si target viene delimitado por < > (ej: <./mi foto.png>) o con título
+    if target.startswith('<'):
+        idx_cierre = target.find('>')
+        if idx_cierre != -1:
+            url = target[1:idx_cierre].strip()
+            resto = target[idx_cierre + 1:].strip()
+            titulo = f" {resto}" if resto else ""
+        else:
+            url = target
+            titulo = ""
+    else:
+        match_titulo = re.match(r'^(.*?)\s+(["\'].*?["\'])$', target)
+        if match_titulo:
+            url = match_titulo.group(1).strip()
+            titulo = f" {match_titulo.group(2)}"
+        else:
+            url = target
+            titulo = ""
+
+    # Ignorar si ya es una URL externa (http, https), data URI o ya es file://
+    if re.match(r'^(https?://|data:|file://)', url, re.IGNORECASE):
+        return match.group(0)
+
+    # Ignorar diagramas .mmd (se procesan como diagramas Mermaid)
+    if url.lower().endswith('.mmd'):
+        return match.group(0)
+
+    # Resolver ruta relativa con respecto a la carpeta del documento (subcarpeta)
+    ruta_absoluta = os.path.abspath(os.path.join(subcarpeta, url))
+
+    if not os.path.exists(ruta_absoluta):
+        print(f"  [Advertencia] No se encontró la imagen: '{url}' en la ruta '{ruta_absoluta}'")
+
+    uri_imagen = Path(ruta_absoluta).as_uri()
+    return f'![{alt_text}]({uri_imagen}{titulo})'
 
 def procesar_markdown(DOCS_DIR):
     DIR_MARKDOWN = os.path.join(DOCS_DIR, "markdown")
@@ -61,11 +102,46 @@ def procesar_markdown(DOCS_DIR):
                 
                 contenido_md += f.read() + "\n\n"
         
+        # Proteger bloques de código para no alterar código de ejemplo
+        bloques_codigo = []
+        def proteger_bloque_codigo(m):
+            if m.group(0).startswith('```math'):
+                return m.group(0)
+            idx = len(bloques_codigo)
+            bloques_codigo.append(m.group(0))
+            return f"<!--CODE_BLOCK_IMG_{idx}-->"
+
+        patron_fenced = re.compile(r'(```[a-zA-Z0-9_-]*\r?\n[\s\S]*?\r?\n```)', re.MULTILINE)
+        contenido_procesado = patron_fenced.sub(proteger_bloque_codigo, contenido_md)
+        patron_inline_code = re.compile(r'(`+)(.+?)\1', re.DOTALL)
+        contenido_procesado = patron_inline_code.sub(proteger_bloque_codigo, contenido_procesado)
+
         # Regex: Buscar ![alt](nombre.mmd)
         patron_mmd = r'!\[([^\]]*)\]\(([^)]+)\.mmd\)'
+        contenido_procesado = re.sub(patron_mmd, lambda match: reemplazar_diagramas_por_png(match, DIR_PNG), contenido_procesado)
         
-        # Reemplazar inyectando el path de la carpeta PNG
-        contenido_procesado = re.sub(patron_mmd, lambda match: reemplazar_diagramas_por_png(match, DIR_PNG), contenido_md)
+        # Regex: Buscar imágenes con formato markdown ![alt](url) relativas al documento
+        patron_img = r'!\[([^\]]*)\]\(([^)]+)\)'
+        contenido_procesado = re.sub(patron_img, lambda match: reemplazar_imagenes_locales(match, subcarpeta), contenido_procesado)
+
+        # Resolver también etiquetas HTML <img src="..."> si usan rutas relativas
+        def reemplazar_src_html(match):
+            antes = match.group(1)
+            src = match.group(2).strip()
+            despues = match.group(3)
+            if re.match(r'^(https?://|data:|file://)', src, re.IGNORECASE):
+                return match.group(0)
+            ruta_absoluta = os.path.abspath(os.path.join(subcarpeta, src))
+            if not os.path.exists(ruta_absoluta):
+                print(f"  [Advertencia] No se encontró la imagen: '{src}' en la ruta '{ruta_absoluta}'")
+            return f'{antes}{Path(ruta_absoluta).as_uri()}{despues}'
+
+        patron_html_img = re.compile(r'(<img\b[^>]*?\bsrc=["\'])([^"\']+)(["\'][^>]*?>)', re.IGNORECASE)
+        contenido_procesado = patron_html_img.sub(reemplazar_src_html, contenido_procesado)
+
+        # Restaurar bloques de código protegidos
+        for idx, bloque in enumerate(bloques_codigo):
+            contenido_procesado = contenido_procesado.replace(f"<!--CODE_BLOCK_IMG_{idx}-->", bloque)
         
         # Procesar fórmulas matemáticas LaTeX (inline y en bloques)
         contenido_procesado = procesar_latex_en_markdown(contenido_procesado)
