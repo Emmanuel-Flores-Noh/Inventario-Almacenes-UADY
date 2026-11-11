@@ -19,11 +19,11 @@ public class Solicitud {
 
     /**
      * Se encapsula la creacion del objeto solicitud para que se hagan por medio de los metodos que proporciona la clase
-     * @param idSolicitud
-     * @param nombreServicio
-     * @param nombreOperacion
-     * @param parametros
-     * @param fechaHora
+     * @param idSolicitud La identificacion de la solicitud
+     * @param nombreServicio El nombre del servicio a solicitar
+     * @param nombreOperacion El nombre de la operacion que el servicio va a realizar
+     * @param parametros Los parametros de la operacion
+     * @param fechaHora La fecha en la que se realizo la solicitud
      */
     private Solicitud(String idSolicitud, String nombreServicio, String nombreOperacion,
                      JsonObject parametros, LocalDateTime fechaHora) {
