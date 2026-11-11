@@ -44,7 +44,7 @@ public class BrokerServer {
      * @param timeoutMillis EL tiempo en milisegundos que sobrepasados hara timeout
      */
     public BrokerServer(int puerto, int tamanoPool, int timeoutMillis) {
-        if (puerto < 1 || puerto > 65535) {
+        if (puerto < 0 || puerto > 65535) {
             throw new IllegalArgumentException("puerto fuera de rango");
         }
         if (tamanoPool <= 0) {
@@ -135,6 +135,9 @@ public class BrokerServer {
     }
 
     public int getPuerto() {
+        if (serverSocket != null && serverSocket.isBound() && !serverSocket.isClosed()) {
+            return serverSocket.getLocalPort();
+        }
         return puerto;
     }
 
