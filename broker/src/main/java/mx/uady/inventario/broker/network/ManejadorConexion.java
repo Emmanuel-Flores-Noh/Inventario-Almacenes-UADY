@@ -115,7 +115,7 @@ public class ManejadorConexion implements Runnable {
 
             // Hacer una operacion del broker
             if ( Servicios.BROKER.equals(solicitud.getNombreServicio()) ) {
-                return registrarDesdeSolicitud(solicitud);
+                return procesarOperacionInterna(solicitud);
             }
 
             return enrutador.enrutar(solicitud, registro);
