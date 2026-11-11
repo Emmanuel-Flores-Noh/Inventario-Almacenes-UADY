@@ -29,6 +29,12 @@
             <artifactId>gson</artifactId>
         </dependency>
 
+        <!-- Modulo comun compartido -->
+        <dependency>
+            <groupId>mx.uady.inventario</groupId>
+            <artifactId>common</artifactId>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
