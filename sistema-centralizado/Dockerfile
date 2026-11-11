@@ -4,11 +4,13 @@ WORKDIR /workspace
 
 # Copiar archivos POM para cachear dependencias
 COPY pom.xml .
+COPY common/pom.xml common/
 COPY sistema-centralizado/pom.xml sistema-centralizado/
 COPY sistema-cliente/pom.xml sistema-cliente/
 COPY broker/pom.xml broker/
 
-# Copiar codigo fuente del modulo
+# Copiar codigo fuente del modulo comun y del modulo objetivo
+COPY common/src common/src
 COPY sistema-centralizado/src sistema-centralizado/src
 
 # Compilacion y empaquetado del modulo
