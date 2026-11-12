@@ -27,4 +27,13 @@ public interface MercanciaService {
      * @return la unidad registrada, con la ruta de su QR
      */
     Mercancia registrar(int idProducto, String numeroSerie);
+
+    /**
+     * Garantiza que la unidad tenga su PNG de QR: si no tiene ruta o el archivo ya no existe,
+     * lo genera y guarda la nueva ruta. Si ya existe, no hace nada.
+     *
+     * @return la unidad con una ruta de QR válida
+     * @throws NegocioException si la unidad no existe
+     */
+    Mercancia asegurarQr(String numeroSerie);
 }

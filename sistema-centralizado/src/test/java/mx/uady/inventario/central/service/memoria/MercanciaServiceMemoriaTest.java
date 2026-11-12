@@ -88,6 +88,45 @@ class MercanciaServiceMemoriaTest {
     }
 
     @Test
+    void asegurarQrGeneraElQrDeUnaUnidadSinElYGuardaLaRuta() {
+        assertEquals(null, servicio.listar(1, null).get(0).rutaQr());
+
+        Mercancia conQr = servicio.asegurarQr("SN-UADY-0001");
+
+        assertEquals(directorioQr.resolve("SN-UADY-0001.png"), Path.of(conQr.rutaQr()));
+        assertTrue(Files.isRegularFile(Path.of(conQr.rutaQr())));
+        assertEquals(EstadoMercancia.EN_ALMACEN, conQr.estado());
+        assertEquals(conQr.rutaQr(), servicio.listar(1, null).get(0).rutaQr());
+    }
+
+    @Test
+    void asegurarQrNoRegeneraSiElArchivoYaExiste() throws Exception {
+        Mercancia primera = servicio.asegurarQr("SN-UADY-0001");
+        java.nio.file.attribute.FileTime antes = Files.getLastModifiedTime(Path.of(primera.rutaQr()));
+        Thread.sleep(20);
+
+        Mercancia segunda = servicio.asegurarQr("sn-uady-0001");
+
+        assertEquals(primera, segunda);
+        assertEquals(antes, Files.getLastModifiedTime(Path.of(segunda.rutaQr())));
+    }
+
+    @Test
+    void asegurarQrRegeneraSiElArchivoSeBorro() throws Exception {
+        Path ruta = Path.of(servicio.asegurarQr("SN-UADY-0003").rutaQr());
+        Files.delete(ruta);
+
+        servicio.asegurarQr("SN-UADY-0003");
+
+        assertTrue(Files.isRegularFile(ruta));
+    }
+
+    @Test
+    void asegurarQrDeUnaUnidadInexistenteEsErrorDeNegocio() {
+        assertThrows(NegocioException.class, () -> servicio.asegurarQr("NO-EXISTE"));
+    }
+
+    @Test
     void filtraPorProductoYPorEstado() {
         assertEquals(2, servicio.listar(1, null).size());
         assertEquals(4, servicio.listar(null, EstadoMercancia.VENDIDO).size());

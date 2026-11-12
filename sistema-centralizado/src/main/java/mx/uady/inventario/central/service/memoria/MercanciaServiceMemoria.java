@@ -1,6 +1,8 @@
 package mx.uady.inventario.central.service.memoria;
 
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -58,6 +60,28 @@ public final class MercanciaServiceMemoria implements MercanciaService {
             Mercancia unidad = new Mercancia(serie, idProducto, EstadoMercancia.EN_ALMACEN, rutaQr);
             almacen.agregarMercancia(unidad);
             return unidad;
+        }
+    }
+
+    @Override
+    public Mercancia asegurarQr(String numeroSerie) {
+        Objects.requireNonNull(numeroSerie, "numeroSerie");
+        synchronized (almacen) {
+            Mercancia unidad = almacen.mercancia.get(AlmacenMemoria.clave(numeroSerie));
+            if (unidad == null) {
+                throw new NegocioException("La unidad " + numeroSerie + " ya no existe; actualiza la lista.");
+            }
+            if (unidad.rutaQr() != null && Files.isRegularFile(Path.of(unidad.rutaQr()))) {
+                return unidad;
+            }
+            Producto producto = almacen.productos.get(unidad.idProducto());
+            if (producto == null) {
+                throw new NegocioException("El producto de la unidad " + numeroSerie + " ya no existe.");
+            }
+            Mercancia conQr = new Mercancia(unidad.numeroSerie(), unidad.idProducto(), unidad.estado(),
+                    generarQr(unidad.numeroSerie(), producto));
+            almacen.agregarMercancia(conQr);
+            return conQr;
         }
     }
 

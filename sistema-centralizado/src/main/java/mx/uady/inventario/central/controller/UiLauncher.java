@@ -6,6 +6,7 @@ import javax.swing.SwingUtilities;
 
 import com.formdev.flatlaf.FlatLightLaf;
 
+import mx.uady.inventario.central.view.MercanciaPanel;
 import mx.uady.inventario.central.view.ProductosPanel;
 import mx.uady.inventario.central.view.VentanaPrincipal;
 
@@ -41,8 +42,20 @@ public final class UiLauncher {
         VentanaPrincipal ventana = new VentanaPrincipal();
 
         ProductosPanel productos = new ProductosPanel();
-        new ProductoController(contexto.productoService(), productos).cargar();
+        ProductoController productoController = new ProductoController(contexto.productoService(), productos);
         ventana.setPestana("Productos", productos);
+
+        MercanciaPanel mercancia = new MercanciaPanel();
+        MercanciaController mercanciaController = new MercanciaController(
+                contexto.mercanciaService(), contexto.productoService(), mercancia);
+        ventana.setPestana("Mercancía", mercancia);
+
+        // Un producto nuevo aparece en los combos de Mercancía; una unidad nueva cambia el conteo en Productos.
+        productoController.setAlCambiarProductos(mercanciaController::cargar);
+        mercanciaController.setAlCambiarUnidades(productoController::cargar);
+
+        productoController.cargar();
+        mercanciaController.cargar();
 
         ventana.setVisible(true);
         return ventana;
