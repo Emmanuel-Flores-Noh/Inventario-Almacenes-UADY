@@ -42,6 +42,7 @@ Thumbs.db
 *.log
 docker/mariadb/data/
 
-AGENTS.md
-PROGRESS.md
-.opencode/
+### Variables de entorno locales ###
+.env
+.env.*
+!.env.example
