@@ -13,17 +13,17 @@ Fase 2: Servidor de servicio del Sistema 1 (en curso).
 ## Pasos de la fase actual
 - [x] Paso 1: `ConfiguracionServicio` (`SERVICE_PORT`, `SERVICE_HOST`, `SERVICE_POOL_SIZE`, `BROKER_*`, reintentos de registro) + pruebas.
 - [x] Paso 2: `JsonServicio` y `DespachadorSolicitudes` con conversion de excepciones a `CodigoError` + pruebas.
-- [ ] Paso 3: `ServidorServicio` concurrente y `ManejadorConexionServicio` + pruebas de socket.
+- [x] Paso 3: `ServidorServicio` concurrente y `ManejadorConexionServicio` + pruebas de socket.
 - [ ] Paso 4: `RegistradorBroker` con reintento acotado + pruebas con broker falso.
 - [ ] Paso 5: Cableado de `Main` (arranque, hook de apagado, registro en segundo plano).
 - [ ] Paso 6: Verificacion integrada broker + servicio con jars reales.
 - [ ] Paso 7: Cierre de fase en PROGRESS.md con evidencia por criterio.
 
 ## Paso en curso
-- Paso 3: `ServidorServicio` y `ManejadorConexionServicio`.
+- Paso 4: `RegistradorBroker`.
 
 ## Siguiente paso
-- Implementar el servidor TCP concurrente y sus pruebas de socket.
+- Implementar el registro en el broker con reintento acotado y sus pruebas.
 
 ## Decisiones y suposiciones
 - Los modelos de las 7 tablas se reutilizan de `common.modelo`; no se duplican en `central.model`.
