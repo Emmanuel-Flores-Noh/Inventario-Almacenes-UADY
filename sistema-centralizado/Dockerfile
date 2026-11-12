@@ -12,6 +12,9 @@ COPY broker/pom.xml broker/
 # Copiar codigo fuente del modulo comun y del modulo objetivo
 COPY common/src common/src
 COPY sistema-centralizado/src sistema-centralizado/src
+# El broker solo se necesita en la etapa de build porque sistema-centralizado
+# lo declara con scope test para las pruebas de integracion de la Fase 5.
+COPY broker/src broker/src
 
 # Compilacion y empaquetado del modulo
 RUN mvn -pl sistema-centralizado -am clean package -DskipTests
