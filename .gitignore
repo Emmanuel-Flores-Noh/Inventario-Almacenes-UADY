@@ -41,3 +41,7 @@ Thumbs.db
 ### Logs & DB runtime ###
 *.log
 docker/mariadb/data/
+
+AGENTS.md
+PROGRESS.md
+.opencode/
