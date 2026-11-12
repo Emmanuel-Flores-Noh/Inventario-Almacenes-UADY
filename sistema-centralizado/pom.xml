@@ -51,6 +51,15 @@
             <artifactId>common</artifactId>
         </dependency>
 
+        <!-- Broker solo para pruebas de integracion de la Fase 5: la prueba de
+             carga arranca un BrokerServer real frente al ServidorServicio. -->
+        <dependency>
+            <groupId>mx.uady.inventario</groupId>
+            <artifactId>broker</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- Testing -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>

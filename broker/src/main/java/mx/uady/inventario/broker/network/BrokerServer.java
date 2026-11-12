@@ -2,6 +2,7 @@ package mx.uady.inventario.broker.network;
 
 import mx.uady.inventario.broker.registry.RegistroServicios;
 import mx.uady.inventario.broker.routing.Enrutador;
+import mx.uady.inventario.broker.util.ConfiguracionBroker;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -18,6 +19,7 @@ public class BrokerServer {
     private final int puerto;
     private final int tamanoPool;
     private final int timeoutMillis;
+    private final ConfiguracionBroker configuracion;
     private final RegistroServicios registro;
     private final Enrutador enrutador;
     private final ExecutorService pool;
@@ -44,18 +46,39 @@ public class BrokerServer {
      * @param timeoutMillis EL tiempo en milisegundos que sobrepasados hara timeout
      */
     public BrokerServer(int puerto, int tamanoPool, int timeoutMillis) {
-        if (puerto < 0 || puerto > 65535) {
-            throw new IllegalArgumentException("puerto fuera de rango");
-        }
-        if (tamanoPool <= 0) {
-            throw new IllegalArgumentException("tamanoPool debe ser positivo");
-        }
-        this.puerto = puerto;
-        this.tamanoPool = tamanoPool;
-        this.timeoutMillis = timeoutMillis;
-        this.registro = new RegistroServicios();
-        this.enrutador = new Enrutador(timeoutMillis);
+        this(configuracionCompatible(puerto, tamanoPool, timeoutMillis));
+    }
+
+    /**
+     * Constructor con la configuracion de resiliencia del broker.
+     * El timeout de lectura se usa tambien como timeout del socket del cliente.
+     * @param configuracion puerto, pool, timeouts, reintentos y umbral de no disponible
+     */
+    public BrokerServer(ConfiguracionBroker configuracion) {
+        this.configuracion = java.util.Objects.requireNonNull(configuracion, "La configuracion es obligatoria");
+        this.puerto = configuracion.puerto();
+        this.tamanoPool = configuracion.tamanoPool();
+        this.timeoutMillis = configuracion.timeoutLecturaMillis();
+        this.registro = new RegistroServicios(configuracion);
+        this.enrutador = new Enrutador(configuracion);
         this.pool = Executors.newFixedThreadPool(tamanoPool);
+    }
+
+    /**
+     * Traduce los constructores anteriores (un solo timeout) a la configuracion
+     * nueva. Se conservan sin reintentos para no cambiar el comportamiento previo.
+     */
+    private static ConfiguracionBroker configuracionCompatible(int puerto, int tamanoPool, int timeoutMillis) {
+        ConfiguracionBroker base = ConfiguracionBroker.porDefecto();
+        return new ConfiguracionBroker(
+                puerto,
+                tamanoPool,
+                timeoutMillis,
+                timeoutMillis,
+                0,
+                0,
+                base.fallosParaIndisponible(),
+                base.tiempoIndisponibleMillis());
     }
 
     /**
@@ -132,6 +155,10 @@ public class BrokerServer {
 
     public Enrutador getEnrutador() {
         return enrutador;
+    }
+
+    public ConfiguracionBroker getConfiguracion() {
+        return configuracion;
     }
 
     public int getPuerto() {

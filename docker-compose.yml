@@ -5,20 +5,24 @@ services:
     container_name: uady-mariadb
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root_secret
-      MYSQL_DATABASE: almacenes_uady
-      MYSQL_USER: uady_user
-      MYSQL_PASSWORD: uady_pass
+      # Las contrasenas son obligatorias y viven en .env: sin ellas el arranque
+      # falla con un mensaje claro en vez de usar un default inseguro.
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?define DB_ROOT_PASSWORD en .env}
+      MARIADB_DATABASE: ${DB_NAME:-almacenes_uady}
+      MARIADB_USER: ${DB_USER:-uady_user}
+      MARIADB_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD en .env}
     ports:
       - "3306:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./docker/mariadb/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-proot_secret"]
+      # $$ evita que Compose expanda la variable en el host: la resuelve el contenedor.
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p\"$${MARIADB_ROOT_PASSWORD}\" --silent"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 10s
     networks:
       - uady-net
 
@@ -30,9 +34,24 @@ services:
     container_name: uady-broker
     restart: unless-stopped
     environment:
-      BROKER_PORT: 5000
+      BROKER_PORT: ${BROKER_PORT:-5000}
+      BROKER_POOL_SIZE: ${BROKER_POOL_SIZE:-16}
+      BROKER_TIMEOUT_CONEXION_MS: ${BROKER_TIMEOUT_CONEXION_MS:-2000}
+      BROKER_TIMEOUT_LECTURA_MS: ${BROKER_TIMEOUT_LECTURA_MS:-5000}
+      BROKER_REINTENTOS: ${BROKER_REINTENTOS:-2}
+      BROKER_ESPERA_REINTENTO_MS: ${BROKER_ESPERA_REINTENTO_MS:-200}
+      BROKER_FALLOS_PARA_INDISPONIBLE: ${BROKER_FALLOS_PARA_INDISPONIBLE:-3}
+      BROKER_INDISPONIBLE_MS: ${BROKER_INDISPONIBLE_MS:-30000}
     ports:
-      - "5000:5000"
+      - "${BROKER_PORT:-5000}:${BROKER_PORT:-5000}"
+    healthcheck:
+      # Comprobacion TCP con el BusyBox nc que ya trae la imagen; el puerto sale
+      # de BROKER_PORT y no de un valor fijo.
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 \"$${BROKER_PORT}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
     networks:
       - uady-net
 
@@ -44,23 +63,29 @@ services:
     container_name: uady-sistema-centralizado
     restart: unless-stopped
     environment:
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_NAME: almacenes_uady
-      DB_USER: uady_user
-      DB_PASSWORD: uady_pass
-      BROKER_HOST: broker
-      BROKER_PORT: 5000
-      SERVICE_PORT: 6000
+      DB_HOST: ${DB_HOST:-mariadb}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_NAME: ${DB_NAME:-almacenes_uady}
+      DB_USER: ${DB_USER:-uady_user}
+      DB_PASSWORD: ${DB_PASSWORD:?define DB_PASSWORD en .env}
+      BROKER_HOST: ${BROKER_HOST:-broker}
+      BROKER_PORT: ${BROKER_PORT:-5000}
+      SERVICE_PORT: ${SERVICE_PORT:-6000}
+      # Host con el que el proveedor se anuncia al broker: el nombre del servicio
+      # en la red de Docker, para que el broker lo alcance.
+      SERVICE_HOST: ${SERVICE_HOST:-sistema-centralizado}
+      SERVICE_POOL_SIZE: ${SERVICE_POOL_SIZE:-16}
+      REGISTRO_INTENTOS: ${REGISTRO_INTENTOS:-30}
+      REGISTRO_ESPERA_MS: ${REGISTRO_ESPERA_MS:-2000}
     ports:
-      - "6000:6000"
+      - "${SERVICE_PORT:-6000}:${SERVICE_PORT:-6000}"
     volumes:
       - qr_storage:/app/storage/qr
     depends_on:
       mariadb:
         condition: service_healthy
       broker:
-        condition: service_started
+        condition: service_healthy
     networks:
       - uady-net
 
@@ -71,14 +96,14 @@ services:
       dockerfile: sistema-cliente/Dockerfile
     container_name: uady-sistema-cliente
     environment:
-      BROKER_HOST: broker
-      BROKER_PORT: 5000
+      BROKER_HOST: ${BROKER_HOST:-broker}
+      BROKER_PORT: ${BROKER_PORT:-5000}
       DISPLAY: ${DISPLAY:-:0}
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:ro
     depends_on:
       broker:
-        condition: service_started
+        condition: service_healthy
     networks:
       - uady-net
     profiles:
