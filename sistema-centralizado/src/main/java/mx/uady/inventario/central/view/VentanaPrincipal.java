@@ -27,7 +27,7 @@ public class VentanaPrincipal extends JFrame {
         // Las pantallas reales sustituyen a estos marcadores en fases posteriores.
         pestanas.addTab("Productos", marcador("Pantalla de productos (en construcción)"));
         pestanas.addTab("Mercancía", marcador("Pantalla de mercancía (en construcción)"));
-        pestanas.addTab("Ventas", marcador("Pantalla de ventas (issue #4)"));
+        pestanas.addTab("Ventas", marcador("Pantalla de ventas (Issue #4)"));
 
         getContentPane().add(pestanas, BorderLayout.CENTER);
         pack();

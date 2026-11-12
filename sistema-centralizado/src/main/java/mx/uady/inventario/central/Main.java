@@ -4,9 +4,6 @@ import mx.uady.inventario.central.controller.UiLauncher;
 import mx.uady.inventario.central.network.DespachadorSolicitudes;
 import mx.uady.inventario.central.network.RegistradorBroker;
 import mx.uady.inventario.central.network.ServidorServicio;
-import mx.uady.inventario.central.network.DespachadorSolicitudes;
-import mx.uady.inventario.central.network.RegistradorBroker;
-import mx.uady.inventario.central.network.ServidorServicio;
 import mx.uady.inventario.central.service.VentaService;
 import mx.uady.inventario.central.util.ConfiguracionBD;
 import mx.uady.inventario.central.util.ConfiguracionServicio;
@@ -30,7 +27,17 @@ public class Main {
             return;
         }
 
-        DespachadorSolicitudes despachador = DespachadorSolicitudes.estandar();
+        ConfiguracionBD configuracionBD;
+        try {
+            configuracionBD = ConfiguracionBD.desdeEntorno();
+        } catch (RuntimeException e) {
+            System.err.println("Configuracion invalida de MariaDB: " + e.getMessage());
+            System.exit(1);
+            return;
+        }
+
+        VentaService ventaService = new VentaService(configuracionBD);
+        DespachadorSolicitudes despachador = DespachadorSolicitudes.estandar(ventaService);
         ServidorServicio servidor = new ServidorServicio(
                 configuracion.puertoServicio(), configuracion.tamanoPool(), despachador);
 
@@ -59,7 +66,7 @@ public class Main {
         System.out.println("  Servicios: " + String.join(", ", RegistradorBroker.serviciosDelSistema()));
         System.out.println("==================================================");
 
-        UiLauncher.iniciar();
+        UiLauncher.iniciar(ventaService);
         try {
             Thread.currentThread().join();
         } catch (InterruptedException e) {
