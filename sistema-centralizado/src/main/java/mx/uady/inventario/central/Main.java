@@ -17,6 +17,12 @@ import mx.uady.inventario.central.util.ConfiguracionServicio;
  */
 public class Main {
 
+    /**
+     * Arranca el servidor TCP, registra el proveedor en el Broker y mantiene
+     * vivo el proceso hasta recibir una interrupción.
+     *
+     * @param args argumentos de línea de comandos; no se utilizan
+     */
     public static void main(String[] args) {
         ConfiguracionServicio configuracion;
         try {

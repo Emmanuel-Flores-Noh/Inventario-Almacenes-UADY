@@ -37,6 +37,10 @@ public class ManejadorConexionServicio implements Runnable {
         this.timeoutMillis = timeoutMillis;
     }
 
+    /**
+     * Procesa solicitudes JSON de la conexión hasta que el cliente se desconecta
+     * o se agota el timeout de lectura.
+     */
     @Override
     public void run() {
         try (
