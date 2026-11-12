@@ -16,14 +16,14 @@ Fase 2: Servidor de servicio del Sistema 1 (en curso).
 - [x] Paso 3: `ServidorServicio` concurrente y `ManejadorConexionServicio` + pruebas de socket.
 - [x] Paso 4: `RegistradorBroker` con reintento acotado + pruebas con broker falso.
 - [x] Paso 5: Cableado de `Main` (arranque, hook de apagado, registro en segundo plano).
-- [ ] Paso 6: Verificacion integrada broker + servicio con jars reales.
+- [x] Paso 6: Verificacion integrada broker + servicio con jars reales.
 - [ ] Paso 7: Cierre de fase en PROGRESS.md con evidencia por criterio.
 
 ## Paso en curso
-- Paso 6: verificacion integrada con jars reales.
+- Paso 7: cierre de la fase y evidencia.
 
 ## Siguiente paso
-- Levantar broker y servicio, comprobar registro/reintento y enrutamiento.
+- Actualizar PROGRESS.md, marcar la Fase 2 y hacer el commit final.
 
 ## Decisiones y suposiciones
 - Los modelos de las 7 tablas se reutilizan de `common.modelo`; no se duplican en `central.model`.
