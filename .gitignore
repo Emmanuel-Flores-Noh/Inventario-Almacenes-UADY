@@ -6,6 +6,9 @@ bin/pnpm-lock.yaml
 __pycache__/
 *.py[cod]
 
+# Conservar la salida de docs
+!docs/**/out/
+
 ### Proyecto broker ###
 target/
 !.mvn/wrapper/maven-wrapper.jar
