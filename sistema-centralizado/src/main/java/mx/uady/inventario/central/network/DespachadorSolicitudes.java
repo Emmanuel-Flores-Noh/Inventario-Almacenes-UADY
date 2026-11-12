@@ -7,6 +7,7 @@ import mx.uady.inventario.common.contrato.Solicitud;
 import mx.uady.inventario.common.error.CodigoError;
 import mx.uady.inventario.common.servicio.Operaciones;
 import mx.uady.inventario.common.servicio.Servicios;
+import mx.uady.inventario.central.service.VentaService;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,6 +50,16 @@ public class DespachadorSolicitudes {
      * @return el despachador con los servicios y operaciones del contrato
      */
     public static DespachadorSolicitudes estandar() {
+        return estandar(null);
+    }
+
+    /**
+     * Crea el despachador estándar conectando la operación de venta.
+     *
+     * @param ventaService servicio de venta; si es nulo, la operación queda pendiente
+     * @return despachador con el catálogo estándar
+     */
+    public static DespachadorSolicitudes estandar(VentaService ventaService) {
         DespachadorSolicitudes despachador = new DespachadorSolicitudes();
         despachador.registrarServicio(Servicios.GESTOR_TIENDAS,
                 Operaciones.LISTAR_TIENDAS, Operaciones.ACTUALIZAR_TIENDA_VENTA);
@@ -56,6 +67,13 @@ public class DespachadorSolicitudes {
                 Operaciones.LISTAR_INVENTARIO);
         despachador.registrarServicio(Servicios.GESTOR_PRECIOS,
                 Operaciones.LISTAR_PRECIOS_PRODUCTO);
+        if (ventaService != null) {
+            despachador.registrarOperacion(
+                    Servicios.GESTOR_TIENDAS,
+                    Operaciones.ACTUALIZAR_TIENDA_VENTA,
+                    ventaService::registrarVenta
+            );
+        }
         return despachador;
     }
 

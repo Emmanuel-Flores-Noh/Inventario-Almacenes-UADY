@@ -47,8 +47,7 @@ public class QrService {
      * @return ruta del sistema de archivos donde se almacenó el archivo PNG generado
      * @throws QrGenerationException si ocurre un error durante la codificación o escritura
      */
-    public String generarCodigoQR(String numeroSerie, int idProducto, String nombreProducto)
-            throws QrGenerationException {
+    public String generarCodigoQR(String numeroSerie, int idProducto, String nombreProducto) throws QrGenerationException {
         validarDatos(numeroSerie, idProducto, nombreProducto);
 
         Path destino = storageDirectory.resolve(numeroSerie + ".png").normalize();
@@ -56,18 +55,14 @@ public class QrService {
             throw new QrGenerationException("El número de serie contiene una ruta no válida");
         }
 
-        String payload = "ID: " + idProducto
-                + " | Producto: " + nombreProducto
-                + " | SN: " + numeroSerie;
+        String payload = "ID: " + idProducto + " | Producto: " + nombreProducto + " | SN: " + numeroSerie;
 
         try {
             Files.createDirectories(storageDirectory);
             QrUtil.escribirPng(payload, destino, QR_SIZE, QR_SIZE);
             return destino.toString();
         } catch (IOException | WriterException exception) {
-            throw new QrGenerationException(
-                    "No fue posible generar el código QR para la unidad " + numeroSerie,
-                    exception
+            throw new QrGenerationException("No fue posible generar el código QR para la unidad " + numeroSerie, exception
             );
         }
     }
