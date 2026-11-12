@@ -14,6 +14,7 @@
     <description>Proyecto distribuido para trazabilidad e inventarios UADY basado en patron Broker</description>
 
     <modules>
+        <module>common</module>
         <module>sistema-centralizado</module>
         <module>sistema-cliente</module>
         <module>broker</module>
@@ -82,6 +83,13 @@
                 <artifactId>junit-jupiter</artifactId>
                 <version>${junit.version}</version>
                 <scope>test</scope>
+            </dependency>
+
+            <!-- Modulo comun compartido -->
+            <dependency>
+                <groupId>mx.uady.inventario</groupId>
+                <artifactId>common</artifactId>
+                <version>${project.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
