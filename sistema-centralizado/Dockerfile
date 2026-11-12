@@ -26,12 +26,11 @@ RUN mkdir -p /app/storage/qr
 # Copiar artefacto empaquetado
 COPY --from=builder /workspace/sistema-centralizado/target/sistema-centralizado.jar /app/sistema-centralizado.jar
 
-# Variables de entorno por defecto
+# Valores no secretos por defecto. Las credenciales (DB_USER, DB_PASSWORD) NO se
+# escriben aqui: las inyecta docker compose desde .env en tiempo de ejecucion.
 ENV DB_HOST=mariadb
 ENV DB_PORT=3306
 ENV DB_NAME=almacenes_uady
-ENV DB_USER=uady_user
-ENV DB_PASSWORD=uady_pass
 ENV BROKER_HOST=broker
 ENV BROKER_PORT=5000
 ENV SERVICE_PORT=6000
