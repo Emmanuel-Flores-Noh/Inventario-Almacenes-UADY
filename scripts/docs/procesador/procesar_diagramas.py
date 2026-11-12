@@ -7,7 +7,8 @@ import json
 from os import path
 import shutil
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Raíz del proyecto: procesador -> docs -> scripts -> raíz del proyecto
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 
 def es_ejecutable(ruta):

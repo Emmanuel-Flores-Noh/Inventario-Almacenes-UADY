@@ -73,7 +73,7 @@ print(saludar("mundo"))
 Ejemplo de Bash:
 
 ```bash
-python tools/procesar_markdown.py docs --out salida/pdf
+python scripts/docs/procesador/procesar_markdown.py docs --out salida/pdf
 ```
 
 Ejemplo de JSON:

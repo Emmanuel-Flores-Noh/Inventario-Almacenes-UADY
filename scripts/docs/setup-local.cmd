@@ -1,14 +1,20 @@
 @echo off
 setlocal
-set "ROOT=%~dp0"
+set "ROOT=%~dp0..\.."
 cd /d "%ROOT%"
 
-set "VENV_DIR=%ROOT%.venv"
+if "%SHARED_VENV_DIR%"=="" (
+    set "VENV_DIR=%USERPROFILE%\.venv"
+) else (
+    set "VENV_DIR=%SHARED_VENV_DIR%"
+)
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
+set "PY_DIR=%ROOT%\scripts\docs\procesador"
 
 echo ========================================
 echo  Configurando entorno local del proyecto
 echo ========================================
+echo Entorno virtual compartido: %VENV_DIR%
 
 where py >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
@@ -25,7 +31,7 @@ if errorlevel 1 (
 
 if not exist "%VENV_DIR%" (
     echo.
-    echo 1. Creando entorno virtual en .venv ...
+    echo 1. Creando entorno virtual compartido en %VENV_DIR% ...
     %PYTHON% -m venv "%VENV_DIR%"
     if errorlevel 1 (
         echo [Error] No se pudo crear el entorno virtual.
@@ -33,14 +39,14 @@ if not exist "%VENV_DIR%" (
     )
 ) else (
     echo.
-    echo 1. El entorno virtual .venv ya existe.
+    echo 1. El entorno virtual compartido ya existe.
 )
 
 echo.
 echo 2. Instalando dependencias de Python ...
 "%VENV_PY%" -m pip install --upgrade pip
 if errorlevel 1 exit /b 1
-"%VENV_PY%" -m pip install -r "%ROOT%requirements.txt"
+"%VENV_PY%" -m pip install -r "%PY_DIR%\requirements.txt"
 if errorlevel 1 exit /b 1
 
 "%VENV_PY%" -c "import weasyprint" >nul 2>nul
@@ -79,11 +85,10 @@ echo Mermaid CLI no se instalara localmente. Instala pnpm con:
 echo   corepack enable pnpm
 echo o, si no tienes corepack:
 echo   npm install -g pnpm
-echo Despues vuelve a ejecutar este script.
 goto fin_mermaid
 
 :pnpm_listo
-pushd "%ROOT%bin"
+pushd "%ROOT%\bin"
 if "%PNPM_CMD%"=="corepack" (
     call corepack pnpm install
 ) else (
@@ -95,11 +100,11 @@ if errorlevel 1 (
 )
 popd
 
-if exist "%ROOT%bin\node_modules\.bin\puppeteer.cmd" (
+if exist "%ROOT%\bin\node_modules\.bin\puppeteer.cmd" (
     echo.
     echo 4. Verificando navegador para Puppeteer ...
-    pushd "%ROOT%bin"
-    call "%ROOT%bin\node_modules\.bin\puppeteer.cmd" browsers install chrome
+    pushd "%ROOT%\bin"
+    call "%ROOT%\bin\node_modules\.bin\puppeteer.cmd" browsers install chrome
     if errorlevel 1 (
         echo [Advertencia] No se pudo descargar Chrome automaticamente.
         echo Si Mermaid falla, define PUPPETEER_EXECUTABLE_PATH con la ruta de un navegador.
@@ -114,7 +119,7 @@ echo ========================================
 echo  Entorno local listo
 echo ========================================
 echo Procesa todos los documentos con:
-echo   procesar-docs-local.cmd
+echo   scripts\docs\procesar-docs-local.cmd
 echo.
 echo O un documento especifico con:
-echo   procesar-docs-local.cmd docs\markdown\Proyecto_A
+echo   scripts\docs\procesar-docs-local.cmd docs\markdown\Proyecto_A

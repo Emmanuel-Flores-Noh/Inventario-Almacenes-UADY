@@ -29,7 +29,7 @@ Su objetivo es servir como lista de comprobación después de generar el PDF.
 Generar únicamente esta demo:
 
 ```bash
-python tools/procesar_markdown.py docs/markdown/Demo_Funcionalidades \
+python scripts/docs/procesador/procesar_markdown.py docs/markdown/Demo_Funcionalidades \
   --out docs/out/docs \
   --diagramas-out docs/out/diagramas
 ```
@@ -37,25 +37,25 @@ python tools/procesar_markdown.py docs/markdown/Demo_Funcionalidades \
 Generar todos los diagramas del proyecto:
 
 ```bash
-python tools/procesar_diagramas.py docs --out docs/out/diagramas
+python scripts/docs/procesador/procesar_diagramas.py docs --out docs/out/diagramas
 ```
 
 Exportar una fórmula a SVG:
 
 ```bash
-python tools/procesar_latex.py --expr "E = mc^2" --out docs/out/formulas/e-mc2.svg
+python scripts/docs/procesador/procesar_latex.py --expr "E = mc^2" --out docs/out/formulas/e-mc2.svg
 ```
 
 Con el entorno local del proyecto:
 
 ```bash
-./procesar-docs-local.sh docs/markdown/Demo_Funcionalidades
+./scripts/docs/procesar-docs-local.sh docs/markdown/Demo_Funcionalidades
 ```
 
 Con Docker:
 
 ```bash
-./procesar-docs.sh
+./scripts/docs/procesar-docs-docker.sh
 ```
 
 ## 6.3 Resultado esperado

@@ -6,7 +6,7 @@ Está diseñado para funcionar de manera **100% portable**, ya sea con Docker o 
 
 ## Características
 
-- **Dos formas de ejecución**: Docker con todo incluido, o un entorno local aislado con `.venv` y Mermaid CLI instalado dentro del proyecto.
+- **Dos formas de ejecución**: Docker con todo incluido, o un entorno local que reutiliza un `.venv` compartido con todo el sistema (en `$HOME/.venv`) y Mermaid CLI instalado dentro del proyecto.
 - **Soporte nativo para Mermaid**: Escribe diagramas en `.mmd` y el sistema los convierte a PNG y PDF de forma transparente.
 - **Soporte para fórmulas LaTeX**: Soporte para ecuaciones matemáticas en línea (`$formula$`) y en bloque (`$$formula$$`, `\[formula\]` o ````math````) convertidas a vectores SVG nítidos.
 - **Diseño profesional**: Los PDFs generados usan la fuente *Inter* de Google Fonts y colores de la paleta Slate de Tailwind.
@@ -23,7 +23,6 @@ Para que el compilador funcione correctamente, debes respetar la siguiente estru
 ```text
 /
 ├── .githooks/                # Scripts de automatización de Git
-├── .venv/                    # Entorno virtual local de Python (generado)
 ├── bin/                      # Mermaid CLI local (generado por setup-local)
 ├── diagramas/                # Archivos de Mermaid (.mmd) van aquí
 ├── markdown/                 # Documentos
@@ -36,18 +35,21 @@ Para que el compilador funcione correctamente, debes respetar la siguiente estru
 │   │   ├── png/
 │   │   └── pdf/
 │   └── docs/                 # Aquí aparecerán tus PDFs finales
-├── tools/                    # Las herramientas necesarias para los documentos
-│   ├── Dockerfile            # Configuracion del contenedor
-│   ├── procesar_diagramas.py # Script compilador de Mermaid
-│   ├── procesar_latex.py     # Script y módulo para procesamiento de LaTeX
-│   └── procesar_markdown.py  # Script compilador de WeasyPrint
-├── requirements.txt          # Dependencias Python para el entorno local
-├── setup-local.cmd           # Instalador local para Windows
-├── setup-local.sh            # Instalador local para Linux/macOS
-├── procesar-docs.cmd         # Lanzador Docker para Windows
-├── procesar-docs.sh          # Lanzador Docker para Linux/macOS
-├── procesar-docs-local.cmd   # Lanzador local para Windows
-└── procesar-docs-local.sh    # Lanzador local para Linux/macOS
+├── scripts/                  # Scripts y herramientas del proyecto
+│   └── docs/
+│       ├── procesador/       # Proyecto Python de procesamiento
+│       │   ├── Dockerfile    # Configuracion del contenedor
+│       │   ├── procesar_diagramas.py # Script compilador de Mermaid
+│       │   ├── procesar_latex.py     # Script y módulo para procesamiento de LaTeX
+│       │   ├── procesar_markdown.py  # Script compilador de WeasyPrint
+│       │   └── requirements.txt      # Dependencias Python (venv compartido)
+│       ├── procesar-docs-docker.cmd  # Lanzador Docker para Windows
+│       ├── procesar-docs-docker.sh   # Lanzador Docker para Linux/macOS
+│       ├── procesar-docs-local.cmd   # Lanzador local para Windows
+│       ├── procesar-docs-local.sh    # Lanzador local para Linux/macOS
+│       ├── setup-local.cmd            # Instalador local para Windows
+│       └── setup-local.sh            # Instalador local para Linux/macOS
+└── (venv compartido en $HOME/.venv, no dentro del proyecto)
 ```
 
 ## Requisitos
@@ -69,13 +71,13 @@ Para que el compilador funcione correctamente, debes respetar la siguiente estru
 ### Opción 1: Docker (recomendada)
 
 ```bash
-./procesar-docs.sh
+./scripts/docs/procesar-docs-docker.sh
 ```
 
 En Windows:
 
 ```bat
-procesar-docs.cmd
+scripts\docs\procesar-docs-docker.cmd
 ```
 
 ### Opción 2: Entorno local aislado
@@ -86,25 +88,26 @@ dentro de la carpeta `bin/` del proyecto.
 En Linux/macOS:
 
 ```bash
-./setup-local.sh
-./procesar-docs-local.sh
+./scripts/docs/setup-local.sh
+./scripts/docs/procesar-docs-local.sh
 ```
 
 En Windows:
 
 ```bat
-setup-local.cmd
-procesar-docs-local.cmd
+scripts\docs\setup-local.cmd
+scripts\docs\procesar-docs-local.cmd
 ```
 
 También puedes procesar un solo documento:
 
 ```bash
-./procesar-docs-local.sh docs/markdown/Proyecto_A
-./procesar-docs-local.sh docs/markdown/Proyecto_A/01-inicio.md
+./scripts/docs/procesar-docs-local.sh docs/markdown/Proyecto_A
+./scripts/docs/procesar-docs-local.sh docs/markdown/Proyecto_A/01-inicio.md
 ```
 
-`setup-local` instala las dependencias de `requirements.txt` en `.venv`, instala
+`setup-local` instala las dependencias de `requirements.txt` en el `.venv` compartido
+(`$HOME/.venv`, sobrescribible con `SHARED_VENV_DIR`), instala
 `@mermaid-js/mermaid-cli` en `bin/node_modules` usando `pnpm` y verifica el
 navegador que usará Puppeteer. Los scripts de Python buscan `mmdc` primero en el
 `PATH` del sistema, luego en `bin/mmdc` y finalmente en `bin/node_modules/.bin/mmdc`.
@@ -130,14 +133,14 @@ Los scripts aceptan `-o` / `--out` para elegir dónde generar sus archivos:
 
 ```bash
 # PDFs de los documentos
-python tools/procesar_markdown.py docs --out salida/pdf
+python scripts/docs/procesador/procesar_markdown.py docs --out salida/pdf
 
 # Diagramas PNG y PDF (se crean salida/diagramas/png y salida/diagramas/pdf)
-python tools/procesar_diagramas.py docs --out salida/diagramas
+python scripts/docs/procesador/procesar_diagramas.py docs --out salida/diagramas
 
 # SVG de una fórmula o Markdown procesado
-python tools/procesar_latex.py --expr "E = mc^2" --out salida/formula.svg
-python tools/procesar_latex.py documento.md --out salida/documento-procesado.md
+python scripts/docs/procesador/procesar_latex.py --expr "E = mc^2" --out salida/formula.svg
+python scripts/docs/procesador/procesar_latex.py documento.md --out salida/documento-procesado.md
 ```
 
 En `procesar_markdown.py`, `--out` controla los PDFs finales. Los diagramas que
@@ -152,7 +155,7 @@ imágenes locales, fórmulas LaTeX y diagramas Mermaid. También incluye una lis
 de comprobación para usarlo como prueba después de cambiar el proyecto.
 
 ```bash
-./procesar-docs-local.sh docs/markdown/Demo_Funcionalidades
+./scripts/docs/procesar-docs-local.sh docs/markdown/Demo_Funcionalidades
 ```
 
 El PDF se genera en `docs/out/docs/Demo_Funcionalidades.pdf`.
