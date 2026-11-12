@@ -13,15 +13,15 @@ Fase 1: Persistencia
 ## Pasos de la fase actual
 - [x] Paso 1: Enum `EstadoMercancia` (EN_ALMACEN, VENDIDO) en `common` y adaptacion de `Mercancia` + pruebas.
 - [x] Paso 2: `ConfiguracionBD` y `ConexionBD` en `central/util` leyendo `DB_*` + pruebas unitarias.
-- [ ] Paso 3: Script `docker/mariadb/init/02_seed.sql` con roles, usuarios, tiendas, productos y mercancia.
+- [x] Paso 3: Script `docker/mariadb/init/02_seed.sql` con roles, usuarios, tiendas, productos y mercancia.
 - [ ] Paso 4: `ConexionBDIntegracionTest` contra MariaDB real para verificar conexion y semilla.
 - [ ] Paso 5: Cierre de fase en PROGRESS.md y evidencia por criterio.
 
 ## Paso en curso
-- Paso 3: crear `docker/mariadb/init/02_seed.sql` idempotente y validarlo contra MariaDB.
+- Paso 4: crear `ConexionBDIntegracionTest` (activado por `DB_PASSWORD`) y ejecutarlo contra MariaDB.
 
 ## Siguiente paso
-- Levantar `mariadb` con Docker y aplicar la semilla.
+- Compilar y ejecutar la prueba de integracion con las variables `DB_*`.
 
 ## Decisiones y suposiciones
 - Los modelos de las 7 tablas se reutilizan de `common.modelo`; no se duplican en `central.model`.
