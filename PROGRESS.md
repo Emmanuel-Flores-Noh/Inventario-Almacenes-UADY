@@ -29,7 +29,8 @@ Ninguna iniciada. La Fase 1 esta completada y verificada.
 - `DB_HOST`, `DB_PORT` y `DB_NAME` tienen defaults (`localhost`, `3306`, `almacenes_uady`); `DB_USER` y `DB_PASSWORD` son obligatorios. Sin credenciales en el codigo.
 - `ConfiguracionBD.desdeMapa(Map)` existe para probar la lectura de variables sin modificar el entorno del JVM; `desdeEntorno()` delega en `System.getenv()`.
 - `ConexionBD` no mantiene conexiones estaticas ni pool; cada operacion abre y cierra la suya. El pool, si hace falta, es decision de la Fase 2.
-- La semilla solo cubre las 5 tablas pedidas (roles, usuarios, tiendas, productos, mercancia); no siembra `ventas` ni `historial_precio`. Las piezas `VENDIDO` son ilustrativas hasta que la Fase 2 registre ventas.
+- El seed (`02_seed.sql`) no incluye las tablas `ventas` ni `historial_precio`.
+- Hay piezas de mercancia con estado `VENDIDO` que son ilustrativas: no tienen una venta registrada. En la Fase 2, cuando se implemente el registro de ventas, hay que decidir si se mantienen asi o se agregan ventas correspondientes en el seed.
 - `02_seed.sql` es idempotente con IDs explicitos e `INSERT ... ON DUPLICATE KEY UPDATE`; se aplico dos veces y los conteos no cambiaron.
 - `ConexionBDIntegracionTest` se activa solo con `DB_PASSWORD` definida (`@EnabledIfEnvironmentVariable`), de modo que `mvn test` sigue funcionando sin MariaDB.
 
