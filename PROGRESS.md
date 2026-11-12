@@ -3,27 +3,25 @@
 ## Estado por fase
 - [x] Fase 1: Persistencia
 - [x] Fase 2: Servidor de servicio del Sistema 1
-- [ ] Fase 3: Resiliencia en el Broker
+- [ ] Fase 3: Resiliencia en el Broker (en curso)
 - [ ] Fase 4: Despliegue
 - [ ] Fase 5: Pruebas
 
 ## Fase actual
-Ninguna iniciada. La Fase 2 esta completada y verificada.
+Fase 3: Resiliencia en el Broker.
 
 ## Pasos de la fase actual
-- [x] Paso 1: `ConfiguracionServicio` (`SERVICE_PORT`, `SERVICE_HOST`, `SERVICE_POOL_SIZE`, `BROKER_*`, reintentos de registro) + pruebas.
-- [x] Paso 2: `JsonServicio` y `DespachadorSolicitudes` con conversion de excepciones a `CodigoError` + pruebas.
-- [x] Paso 3: `ServidorServicio` concurrente y `ManejadorConexionServicio` + pruebas de socket.
-- [x] Paso 4: `RegistradorBroker` con reintento acotado + pruebas con broker falso.
-- [x] Paso 5: Cableado de `Main` (arranque, hook de apagado, registro en segundo plano).
-- [x] Paso 6: Verificacion integrada broker + servicio con jars reales.
-- [x] Paso 7: Cierre de fase en PROGRESS.md con evidencia por criterio.
+- [ ] Paso 1: `ConfiguracionBroker` con timeouts de conexion/lectura, reintentos y salud de proveedores + pruebas.
+- [ ] Paso 2: Salud de proveedores en `RegistroServicios` (fallos consecutivos, enfriamiento y reactivacion) + pruebas.
+- [ ] Paso 3: `Enrutador` con timeouts separados, reintentos limitados y marca de no disponible + pruebas.
+- [ ] Paso 4: Cableado de `BrokerServer` y `Main` con `ConfiguracionBroker` desde variables de entorno.
+- [ ] Paso 5: Verificacion con jars reales y cierre de fase con evidencia por criterio.
 
 ## Paso en curso
-- Ninguno.
+- Paso 1: `ConfiguracionBroker` con timeouts de conexion/lectura, reintentos y salud de proveedores + pruebas.
 
 ## Siguiente paso
-- Esperar instrucciones para iniciar la Fase 3 (resiliencia en el Broker).
+- Implementar `ConfiguracionBroker` y su prueba unitaria.
 
 ## Decisiones y suposiciones
 - Los modelos de las 7 tablas se reutilizan de `common.modelo`; no se duplican en `central.model`.
@@ -44,6 +42,16 @@ Ninguna iniciada. La Fase 2 esta completada y verificada.
 - El registro en el broker corre en un hilo daemon para no bloquear el arranque del servidor. Al agotar `REGISTRO_INTENTOS` se escribe el fallo en `stderr` y el servidor sigue escuchando.
 - El servidor de servicio no abre conexiones a MariaDB al arrancar: la red y la persistencia fallan de forma independiente.
 - No se envia `removerProveedor` al apagar; queda pendiente para una fase posterior si se necesita.
+- Variables nuevas de la Fase 3 (broker) con sus valores por defecto:
+  - `BROKER_PORT` = `5000` (ya existia; ahora se lee en `ConfiguracionBroker`).
+  - `BROKER_POOL_SIZE` = `16` (ya existia; ahora se lee en `ConfiguracionBroker`).
+  - `BROKER_TIMEOUT_CONEXION_MS` = `2000`: timeout de `connect` hacia el proveedor.
+  - `BROKER_TIMEOUT_LECTURA_MS` = `5000`: timeout de lectura de la respuesta del proveedor.
+  - `BROKER_REINTENTOS` = `2`: reintentos **adicionales** tras el primer intento (hasta 3 intentos).
+  - `BROKER_ESPERA_REINTENTO_MS` = `200`: espera entre intentos.
+  - `BROKER_FALLOS_PARA_INDISPONIBLE` = `3`: fallos consecutivos antes de marcar al proveedor como no disponible.
+  - `BROKER_INDISPONIBLE_MS` = `30000`: enfriamiento configurable antes de reintentar un proveedor marcado.
+- Los nombres y defaults de la Fase 3 se acordaron con el usuario y viven en `ConfiguracionBroker.desdeMapa`.
 
 ## Problemas abiertos
 - `docker-compose.yml` no define `SERVICE_HOST`; dentro de Docker el proveedor se anunciaria como `localhost` y el broker no lo alcanzaria. Debe resolverse en la Fase 4 (despliegue).
