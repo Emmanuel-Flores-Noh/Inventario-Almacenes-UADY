@@ -1,4 +1,6 @@
 target/
+# Generado por maven-shade-plugin al empaquetar
+dependency-reduced-pom.xml
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/.gitkeep
 !**/src/test/**/.gitkeep
@@ -39,3 +41,8 @@ Thumbs.db
 ### Logs & DB runtime ###
 *.log
 docker/mariadb/data/
+
+### Variables de entorno locales ###
+.env
+.env.*
+!.env.example
