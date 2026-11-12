@@ -9,7 +9,7 @@ import java.util.Objects;
  * @param estado El estado de la mercancia
  * @param rutaQr La ruta del archivo QR en formato png
  */
-public record Mercancia(String numeroSerie, int idProducto, String estado, String rutaQr) {
+public record Mercancia(String numeroSerie, int idProducto, EstadoMercancia estado, String rutaQr) {
 
     @Override
     public boolean equals(Object o) {

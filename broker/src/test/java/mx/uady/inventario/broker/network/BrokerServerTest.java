@@ -1,6 +1,8 @@
 package mx.uady.inventario.broker.network;
 
 import mx.uady.inventario.broker.registry.RegistroServicios;
+import mx.uady.inventario.broker.model.Proveedor;
+import mx.uady.inventario.broker.util.ConfiguracionBroker;
 import mx.uady.inventario.common.contrato.Respuesta;
 import mx.uady.inventario.common.contrato.Solicitud;
 import mx.uady.inventario.common.json.GsonFactory;
@@ -87,6 +89,35 @@ class BrokerServerTest {
             broker.detener();
             provider.close();
             hilo.join();
+        }
+    }
+
+    @Test
+    void usaLaConfiguracionDeResilienciaRecibida() throws Exception {
+        ConfiguracionBroker configuracion = new ConfiguracionBroker(0, 2, 300, 400, 1, 5, 1, 60_000);
+        BrokerServer broker = new BrokerServer(configuracion);
+        assertEquals(configuracion, broker.getConfiguracion());
+        broker.iniciar();
+        int puerto = broker.getPuerto();
+
+        try (Socket socket = new Socket("localhost", puerto);
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+            // Con fallosParaIndisponible=1 basta un fallo para marcar al proveedor.
+            broker.getRegistro().registrar(new Proveedor(Servicios.INVENTARIO, "localhost", 1));
+            broker.getRegistro().marcarFallo(Servicios.INVENTARIO);
+
+            Solicitud solicitud = Solicitud.crear("req-sin-disponible", Servicios.INVENTARIO, "listarInventario",
+                    new com.google.gson.JsonObject());
+            out.println(GsonFactory.DEFAULT.toJson(solicitud));
+            Respuesta respuesta = GsonFactory.DEFAULT.fromJson(in.readLine(), Respuesta.class);
+
+            assertEquals(mx.uady.inventario.common.error.CodigoError.PROVEEDOR_NO_REGISTRADO,
+                    respuesta.getCodigoError());
+            assertEquals("req-sin-disponible", respuesta.getIdSolicitud());
+        } finally {
+            broker.detener();
         }
     }
 

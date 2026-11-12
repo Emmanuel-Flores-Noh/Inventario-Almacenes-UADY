@@ -2,6 +2,7 @@ package mx.uady.inventario.broker.routing;
 
 import mx.uady.inventario.broker.model.Proveedor;
 import mx.uady.inventario.broker.registry.RegistroServicios;
+import mx.uady.inventario.broker.util.ConfiguracionBroker;
 import mx.uady.inventario.common.contrato.Respuesta;
 import mx.uady.inventario.common.contrato.Solicitud;
 import mx.uady.inventario.common.error.CodigoError;
@@ -16,22 +17,72 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Enruta una solicitud al proveedor registrado y devuelve la respuesta.
+ *
+ * <p>La resiliencia vive aqui: el timeout de conexion y el de lectura se
+ * configuran por separado, los fallos de red se reintentan de forma acotada y
+ * cada fallo se reporta al {@link RegistroServicios} para que un proveedor que
+ * falla de forma repetida quede marcado como no disponible.</p>
+ *
+ * <p>Una respuesta de error valida del proveedor no es un fallo de red: no se
+ * reintenta y ademas cuenta como comunicacion exitosa.</p>
  */
 public class Enrutador {
-    private final int timeoutMillis;
+    private final int timeoutConexionMillis;
+    private final int timeoutLecturaMillis;
+    private final int reintentos;
+    private final long esperaReintentoMillis;
 
     /**
-     * Constructor de un enrutador
+     * Constructor compatible con el comportamiento anterior: el mismo timeout
+     * para conexion y lectura, sin reintentos.
+     *
      * @param timeoutMillis El tiempo en milisegundos para marcar una peticion como timeout
      */
     public Enrutador(int timeoutMillis) {
-        if (timeoutMillis <= 0) {
-            throw new IllegalArgumentException("timeoutMillis debe ser positivo");
+        this(timeoutMillis, timeoutMillis, 0, 0);
+    }
+
+    /**
+     * Constructor con la configuracion de resiliencia del broker.
+     *
+     * @param configuracion timeouts, reintentos y espera entre intentos
+     */
+    public Enrutador(ConfiguracionBroker configuracion) {
+        this(configuracion.timeoutConexionMillis(),
+                configuracion.timeoutLecturaMillis(),
+                configuracion.reintentos(),
+                configuracion.esperaReintentoMillis());
+    }
+
+    /**
+     * Constructor con todos los parametros de red.
+     *
+     * @param timeoutConexionMillis timeout de conexion al proveedor
+     * @param timeoutLecturaMillis timeout de lectura de la respuesta
+     * @param reintentos reintentos adicionales tras el primer intento
+     * @param esperaReintentoMillis espera entre intentos
+     */
+    public Enrutador(int timeoutConexionMillis, int timeoutLecturaMillis, int reintentos, long esperaReintentoMillis) {
+        if (timeoutConexionMillis <= 0) {
+            throw new IllegalArgumentException("timeoutConexionMillis debe ser positivo");
         }
-        this.timeoutMillis = timeoutMillis;
+        if (timeoutLecturaMillis <= 0) {
+            throw new IllegalArgumentException("timeoutLecturaMillis debe ser positivo");
+        }
+        if (reintentos < 0) {
+            throw new IllegalArgumentException("reintentos no puede ser negativo");
+        }
+        if (esperaReintentoMillis < 0) {
+            throw new IllegalArgumentException("esperaReintentoMillis no puede ser negativo");
+        }
+        this.timeoutConexionMillis = timeoutConexionMillis;
+        this.timeoutLecturaMillis = timeoutLecturaMillis;
+        this.reintentos = reintentos;
+        this.esperaReintentoMillis = esperaReintentoMillis;
     }
 
     /**
@@ -47,35 +98,71 @@ public class Enrutador {
     }
 
     /**
+     * Enruta la solicitud al proveedor del servicio, con reintentos acotados.
      *
-     * @param solicitud
-     * @param registro
-     * @throws IllegalArgumentException Si la solicitud tiene una id null
-     * @return La respuesta del servicio
+     * @param solicitud solicitud a enviar
+     * @param registro registro de proveedores y su salud
+     * @throws IllegalArgumentException si la solicitud no tiene id, servicio u operacion
+     * @return la respuesta del servicio o una respuesta de error del broker
      */
     public Respuesta enrutar(Solicitud solicitud, RegistroServicios registro) throws IllegalArgumentException {
-        if( !validarSolicitud(solicitud) ) {
-            throw new IllegalArgumentException("La solicitud tiene una id null");
+        if (!validarSolicitud(solicitud)) {
+            throw new IllegalArgumentException("La solicitud no tiene id, servicio u operacion");
+        }
+        Objects.requireNonNull(registro, "El registro es obligatorio");
+
+        Optional<Proveedor> proveedorOpt = registro.buscar(solicitud.getNombreServicio());
+        if (proveedorOpt.isEmpty()) {
+            return Respuesta.error(solicitud.getIdSolicitud(), CodigoError.SERVICIO_DESCONOCIDO,
+                    "Servicio desconocido: " + solicitud.getNombreServicio());
+        }
+        if (!registro.estaDisponible(solicitud.getNombreServicio())) {
+            return Respuesta.error(solicitud.getIdSolicitud(), CodigoError.PROVEEDOR_NO_REGISTRADO,
+                    "Proveedor no disponible: " + solicitud.getNombreServicio());
         }
 
-        Proveedor proveedor;
-        {
-            java.util.Optional<Proveedor> proveedorOpt = registro.buscar(solicitud.getNombreServicio());
-            if (proveedorOpt.isEmpty()) {
-                return Respuesta.error(solicitud.getIdSolicitud(), CodigoError.SERVICIO_DESCONOCIDO, "Servicio desconocido: " + solicitud.getNombreServicio());
+        Proveedor proveedor = proveedorOpt.get();
+        int intentosTotales = reintentos + 1;
+        CodigoError ultimoCodigo = CodigoError.ERROR_INTERNO;
+        String ultimoMensaje = "Error de comunicacion con el proveedor";
+
+        for (int intento = 1; intento <= intentosTotales; intento++) {
+            try (Socket socket = new Socket()) {
+                Respuesta respuesta = redireccionarSolicitud(solicitud, socket, proveedor);
+                // La comunicacion funciono aunque el proveedor haya respondido con error.
+                registro.marcarExito(solicitud.getNombreServicio());
+                return respuesta;
+            } catch (SocketTimeoutException e) {
+                ultimoCodigo = CodigoError.TIMEOUT;
+                ultimoMensaje = "Tiempo de espera agotado al contactar al proveedor";
+            } catch (IOException | RuntimeException e) {
+                ultimoCodigo = CodigoError.ERROR_INTERNO;
+                ultimoMensaje = "Error de comunicacion con el proveedor: " + e.getMessage();
             }
-            proveedor = proveedorOpt.get();
+
+            if (intento < intentosTotales && !esperarAntesDelSiguienteIntento()) {
+                break;
+            }
         }
 
+        registro.marcarFallo(solicitud.getNombreServicio());
+        return Respuesta.error(solicitud.getIdSolicitud(), ultimoCodigo, ultimoMensaje);
+    }
 
-        try (Socket socket = new Socket()) {
-            return redireccionarSolicitud(solicitud, socket, proveedor);
-        } catch (SocketTimeoutException e) {
-            return Respuesta.error(solicitud.getIdSolicitud(), CodigoError.TIMEOUT, "Tiempo de espera agotado al contactar al proveedor");
-        } catch (IOException e) {
-            return Respuesta.error(solicitud.getIdSolicitud(), CodigoError.ERROR_INTERNO, "Error de comunicacion con el proveedor: " + e.getMessage());
-        } catch (RuntimeException e) {
-            return Respuesta.error(solicitud.getIdSolicitud(), CodigoError.ERROR_INTERNO, "Error al procesar la respuesta del proveedor: " + e.getMessage());
+    /**
+     * Espera entre intentos. Devuelve {@code false} si el hilo fue interrumpido,
+     * en cuyo caso se dejan de reintentar para no demorar el apagado.
+     */
+    private boolean esperarAntesDelSiguienteIntento() {
+        if (esperaReintentoMillis <= 0) {
+            return true;
+        }
+        try {
+            Thread.sleep(esperaReintentoMillis);
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
         }
     }
 
@@ -85,30 +172,31 @@ public class Enrutador {
      * @param socket El socket para la conexion al proveedor
      * @param proveedor El proveedor a cual el socket se va a conectar
      * @return La respuesta del servicio, sea exitosa o no
-     * @throws IOException
+     * @throws IOException si no se pudo conectar, leer o la respuesta no es utilizable
      */
     private Respuesta redireccionarSolicitud(Solicitud solicitud, Socket socket, Proveedor proveedor) throws IOException {
-        socket.connect(new InetSocketAddress(proveedor.host(), proveedor.puerto()), timeoutMillis);
-        socket.setSoTimeout(timeoutMillis);
+        socket.connect(new InetSocketAddress(proveedor.host(), proveedor.puerto()), timeoutConexionMillis);
+        socket.setSoTimeout(timeoutLecturaMillis);
 
         PrintWriter salida = new PrintWriter(socket.getOutputStream(), true, StandardCharsets.UTF_8);
-        BufferedReader entrada = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+        BufferedReader entrada = new BufferedReader(
+                new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
 
         salida.println(GsonFactory.DEFAULT.toJson(solicitud));
         salida.flush();
 
         String respuestaJson = entrada.readLine();
         if (respuestaJson == null || respuestaJson.isBlank()) {
-            return Respuesta.error(solicitud.getIdSolicitud(), CodigoError.ERROR_INTERNO, "El proveedor no devolvio respuesta");
+            throw new IOException("El proveedor no devolvio respuesta");
         }
 
         Respuesta respuesta = GsonFactory.DEFAULT.fromJson(respuestaJson, Respuesta.class);
         if (respuesta == null) {
-            return Respuesta.error(solicitud.getIdSolicitud(), CodigoError.ERROR_INTERNO, "Respuesta invalida del proveedor");
+            throw new IOException("Respuesta invalida del proveedor");
         }
 
         if (!Objects.equals(respuesta.getIdSolicitud(), solicitud.getIdSolicitud())) {
-            return Respuesta.error(solicitud.getIdSolicitud(), CodigoError.ERROR_INTERNO,"El id de la respuesta no coincide con la solicitud");
+            throw new IOException("El id de la respuesta no coincide con la solicitud");
         }
 
         return respuesta;
