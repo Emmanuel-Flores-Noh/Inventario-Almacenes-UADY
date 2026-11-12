@@ -15,15 +15,15 @@ Fase 2: Servidor de servicio del Sistema 1 (en curso).
 - [x] Paso 2: `JsonServicio` y `DespachadorSolicitudes` con conversion de excepciones a `CodigoError` + pruebas.
 - [x] Paso 3: `ServidorServicio` concurrente y `ManejadorConexionServicio` + pruebas de socket.
 - [x] Paso 4: `RegistradorBroker` con reintento acotado + pruebas con broker falso.
-- [ ] Paso 5: Cableado de `Main` (arranque, hook de apagado, registro en segundo plano).
+- [x] Paso 5: Cableado de `Main` (arranque, hook de apagado, registro en segundo plano).
 - [ ] Paso 6: Verificacion integrada broker + servicio con jars reales.
 - [ ] Paso 7: Cierre de fase en PROGRESS.md con evidencia por criterio.
 
 ## Paso en curso
-- Paso 5: cableado de `Main`.
+- Paso 6: verificacion integrada con jars reales.
 
 ## Siguiente paso
-- Arrancar servidor, registrar en segundo plano y agregar hook de apagado.
+- Levantar broker y servicio, comprobar registro/reintento y enrutamiento.
 
 ## Decisiones y suposiciones
 - Los modelos de las 7 tablas se reutilizan de `common.modelo`; no se duplican en `central.model`.
