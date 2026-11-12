@@ -8,20 +8,22 @@
 - [ ] Fase 5: Pruebas
 
 ## Fase actual
-Ninguna iniciada. La Fase 1 esta completada y verificada.
+Fase 2: Servidor de servicio del Sistema 1 (en curso).
 
 ## Pasos de la fase actual
-- [x] Paso 1: Enum `EstadoMercancia` (EN_ALMACEN, VENDIDO) en `common` y adaptacion de `Mercancia` + pruebas.
-- [x] Paso 2: `ConfiguracionBD` y `ConexionBD` en `central/util` leyendo `DB_*` + pruebas unitarias.
-- [x] Paso 3: Script `docker/mariadb/init/02_seed.sql` con roles, usuarios, tiendas, productos y mercancia.
-- [x] Paso 4: `ConexionBDIntegracionTest` contra MariaDB real para verificar conexion y semilla.
-- [x] Paso 5: Cierre de fase en PROGRESS.md y evidencia por criterio.
+- [ ] Paso 1: `ConfiguracionServicio` (`SERVICE_PORT`, `SERVICE_HOST`, `SERVICE_POOL_SIZE`, `BROKER_*`, reintentos de registro) + pruebas.
+- [ ] Paso 2: `JsonServicio` y `DespachadorSolicitudes` con conversion de excepciones a `CodigoError` + pruebas.
+- [ ] Paso 3: `ServidorServicio` concurrente y `ManejadorConexionServicio` + pruebas de socket.
+- [ ] Paso 4: `RegistradorBroker` con reintento acotado + pruebas con broker falso.
+- [ ] Paso 5: Cableado de `Main` (arranque, hook de apagado, registro en segundo plano).
+- [ ] Paso 6: Verificacion integrada broker + servicio con jars reales.
+- [ ] Paso 7: Cierre de fase en PROGRESS.md con evidencia por criterio.
 
 ## Paso en curso
-- Ninguno.
+- Paso 1: `ConfiguracionServicio` y sus pruebas.
 
 ## Siguiente paso
-- Esperar instrucciones para iniciar la Fase 2 (servidor de servicio del Sistema 1).
+- Implementar `central/util/ConfiguracionServicio`.
 
 ## Decisiones y suposiciones
 - Los modelos de las 7 tablas se reutilizan de `common.modelo`; no se duplican en `central.model`.
