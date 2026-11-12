@@ -1,0 +1,22 @@
+classDiagram
+    class Documento {
+        +String titulo
+        +String autor
+        +List~Seccion~ secciones
+        +generarPDF()
+    }
+
+    class Seccion {
+        +String titulo
+        +String contenido
+        +agregarContenido(texto)
+    }
+
+    class Diagrama {
+        +String archivo
+        +String formato
+        +compilar()
+    }
+
+    Documento "1" *-- "1..*" Seccion : contiene
+    Seccion "1" o-- "0..*" Diagrama : referencia

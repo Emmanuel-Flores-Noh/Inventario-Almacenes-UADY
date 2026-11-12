@@ -2,7 +2,7 @@ import os
 import re
 import glob
 import sys
-from sys import argv
+import argparse
 from pathlib import Path
 import markdown
 from weasyprint import HTML
@@ -244,7 +244,14 @@ def resolver_ruta_diagrama(referencia, docs_dir, subcarpeta):
     return None
 
 
-def compilar_diagramas_requeridos(archivos_md, docs_dir, subcarpeta):
+def obtener_salida_diagramas(docs_dir, diagramas_out=None):
+    """Devuelve la carpeta raíz donde se guardan PNG/PDF de diagramas."""
+    if diagramas_out:
+        return os.path.abspath(diagramas_out)
+    return os.path.join(docs_dir, "out/diagramas")
+
+
+def compilar_diagramas_requeridos(archivos_md, docs_dir, subcarpeta, diagramas_out=None):
     """Compila únicamente los diagramas Mermaid referenciados por los Markdown."""
     referencias = detectar_diagramas_mermaid(archivos_md)
 
@@ -253,8 +260,9 @@ def compilar_diagramas_requeridos(archivos_md, docs_dir, subcarpeta):
 
     print(f"  Diagramas Mermaid requeridos: {', '.join(referencias)}")
 
-    out_png = os.path.join(docs_dir, "out/diagramas/png")
-    out_pdf = os.path.join(docs_dir, "out/diagramas/pdf")
+    out_diagramas = obtener_salida_diagramas(docs_dir, diagramas_out)
+    out_png = os.path.join(out_diagramas, "png")
+    out_pdf = os.path.join(out_diagramas, "pdf")
     pendientes = []
 
     for referencia in referencias:
@@ -286,7 +294,7 @@ def compilar_diagramas_requeridos(archivos_md, docs_dir, subcarpeta):
     if faltan_dependencias():
         print("  [Advertencia] Se necesita Mermaid CLI para compilar los diagramas.")
         print("  Opción local: ejecuta ./setup-local.sh (Linux/macOS) o setup-local.cmd (Windows).")
-        print("  Opción global: sudo npm install -g @mermaid-js/mermaid-cli")
+        print("  Opción global: pnpm add -g @mermaid-js/mermaid-cli")
         return
 
     preparar_directorios([out_png, out_pdf])
@@ -296,16 +304,16 @@ def compilar_diagramas_requeridos(archivos_md, docs_dir, subcarpeta):
         compilar_diagrama(ruta_mmd, ruta_png, ruta_pdf, config_puppeteer)
 
 
-def procesar_documento(archivos_md, nombre_proyecto, subcarpeta, docs_dir):
-    out_docs = os.path.join(docs_dir, "out/docs")
-    dir_png = os.path.join(docs_dir, "out/diagramas/png")
+def procesar_documento(archivos_md, nombre_proyecto, subcarpeta, docs_dir, out_dir=None, diagramas_out=None):
+    out_docs = os.path.abspath(out_dir) if out_dir else os.path.join(docs_dir, "out/docs")
+    dir_png = os.path.join(obtener_salida_diagramas(docs_dir, diagramas_out), "png")
 
     os.makedirs(out_docs, exist_ok=True)
 
     print(f"Procesando documento: {nombre_proyecto} ...")
 
     # Detectar y compilar solo los diagramas que necesita este documento.
-    compilar_diagramas_requeridos(archivos_md, docs_dir, subcarpeta)
+    compilar_diagramas_requeridos(archivos_md, docs_dir, subcarpeta, diagramas_out)
 
     contenido_md = ""
     archivos_ordenados = sorted(archivos_md)
@@ -411,6 +419,7 @@ def procesar_documento(archivos_md, nombre_proyecto, subcarpeta, docs_dir):
 
             img {{
                 max-width: 100%;
+                max-height: 7.5in;
                 height: auto;
                 display: block;
                 margin: 2em auto;
@@ -466,8 +475,10 @@ def procesar_documento(archivos_md, nombre_proyecto, subcarpeta, docs_dir):
 
             /* Tablas adaptadas a la paleta Slate */
             table {{
+                margin-left: -70px;
                 border-collapse: collapse;
-                width: 100%;
+                width: 750px;
+                table-layout: fixed;
                 margin-bottom: 1.5em;
             }}
             th, td {{
@@ -475,6 +486,8 @@ def procesar_documento(archivos_md, nombre_proyecto, subcarpeta, docs_dir):
                 padding: 8pt 10pt;
                 text-align: left;
                 vertical-align: top;
+                overflow-wrap: break-word;
+                word-wrap: break-word;
             }}
             th {{
                 background-color: #f8fafc; /* Fondo suave slate-50 */
@@ -531,43 +544,77 @@ def procesar_documento(archivos_md, nombre_proyecto, subcarpeta, docs_dir):
         print(f"  [Error] Falló la generación del PDF para {nombre_proyecto}: {e}")
 
 
-def procesar_markdown(entrada):
+def procesar_markdown(entrada, out_dir=None, diagramas_out=None):
     docs_dir, documentos = resolver_objetivo(entrada)
 
     if not documentos:
         print(f"No se encontraron documentos para procesar en: {docs_dir}")
         return
 
+    # Si se define una salida general y no una específica para diagramas,
+    # los diagramas compilados se guardan dentro de esa misma salida.
+    if out_dir and not diagramas_out:
+        diagramas_out = os.path.join(os.path.abspath(out_dir), "diagramas")
+
     print(f"Carpeta de documentos: {docs_dir}")
 
     for subcarpeta, nombre_proyecto, archivos_md in documentos:
-        procesar_documento(archivos_md, nombre_proyecto, subcarpeta, docs_dir)
-
-
-def mostrar_ayuda():
-    print("Uso:")
-    print("  python procesar_markdown.py <RUTA_DOCS>")
-    print("  python procesar_markdown.py <RUTA_CARPETA_DOCUMENTO>")
-    print("  python procesar_markdown.py <RUTA_ARCHIVO_MD>")
-    print("")
-    print("Ejemplos:")
-    print("  python procesar_markdown.py docs")
-    print("  python procesar_markdown.py docs/markdown/Proyecto_A")
-    print("  python procesar_markdown.py docs/markdown/Proyecto_A/01-inicio.md")
+        procesar_documento(
+            archivos_md,
+            nombre_proyecto,
+            subcarpeta,
+            docs_dir,
+            out_dir=out_dir,
+            diagramas_out=diagramas_out,
+        )
 
 
 def main():
-    if len(argv) < 2:
-        print("Error: No se ha proporcionado la carpeta o el documento a procesar.")
-        mostrar_ayuda()
+    parser = argparse.ArgumentParser(
+        description="Genera PDFs a partir de documentos Markdown y diagramas Mermaid.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Ejemplos:
+  python procesar_markdown.py docs
+  python procesar_markdown.py docs/markdown/Proyecto_A --out salida
+  python procesar_markdown.py docs/markdown/Proyecto_A/01-inicio.md -o salida
+""",
+    )
+    parser.add_argument(
+        "entrada",
+        nargs="?",
+        help="Carpeta de documentos, carpeta de un documento o archivo .md.",
+    )
+    parser.add_argument(
+        "-o", "--out",
+        dest="out_dir",
+        default=None,
+        help=(
+            "Carpeta de salida para los PDFs. Por defecto se usa "
+            "<RUTA_DOCS>/out/docs."
+        ),
+    )
+    parser.add_argument(
+        "--diagramas-out",
+        dest="diagramas_out",
+        default=None,
+        help=(
+            "Carpeta raíz para los diagramas compilados (subcarpetas png/ y pdf/). "
+            "Por defecto: <RUTA_DOCS>/out/diagramas, o <SALIDA>/diagramas si "
+            "se especifica --out."
+        ),
+    )
+    args = parser.parse_args()
+
+    if not args.entrada:
+        parser.print_help()
         return 1
 
-    if argv[1] in ("-h", "--help"):
-        mostrar_ayuda()
-        return 0
-
     try:
-        procesar_markdown(argv[1])
+        procesar_markdown(
+            args.entrada,
+            out_dir=args.out_dir,
+            diagramas_out=args.diagramas_out,
+        )
     except (FileNotFoundError, ValueError) as e:
         print(f"Error: {e}")
         return 1

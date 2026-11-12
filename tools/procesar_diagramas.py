@@ -1,9 +1,9 @@
 import os
 import sys
+import argparse
 import subprocess
 import glob
 import json
-from sys import argv
 from os import path
 import shutil
 
@@ -173,40 +173,57 @@ def procesar_diagramas(DIR_DIAGRAMAS, OUT_PNG, OUT_PDF, config_puppeteer, mmdc=N
 
 
 def main():
-    mmdc = buscar_mmdc()
-    if mmdc is None:
-        print("Se necesita Mermaid CLI para procesar los diagramas.")
-        print("Opción local: ejecuta ./setup-local.sh (Linux/macOS) o setup-local.cmd (Windows).")
-        print("Opción global: sudo npm install -g @mermaid-js/mermaid-cli")
-        return
+    parser = argparse.ArgumentParser(
+        description="Convierte archivos Mermaid (.mmd) a PNG y PDF."
+    )
+    parser.add_argument(
+        "docs_dir",
+        help="Carpeta de documentos que contiene la subcarpeta diagramas/.",
+    )
+    parser.add_argument(
+        "-o", "--out",
+        dest="out_dir",
+        default=None,
+        help=(
+            "Carpeta raíz de salida para los diagramas. Se generan las "
+            "subcarpetas png/ y pdf/. Por defecto: <RUTA_DOCS>/out/diagramas."
+        ),
+    )
+    args = parser.parse_args()
 
-    if len(argv) < 2:
-        print("Error: No se ha proporcionado la carpeta principal de los documentos.")
-        print("Uso: python procesar_diagramas.py <RUTA_DOCS>")
-        return
-
-    DOCS_DIR = argv[1]
+    DOCS_DIR = os.path.abspath(args.docs_dir)
 
     if not os.path.exists(DOCS_DIR):
         print(f"La carpeta especificada no existe: {DOCS_DIR}")
-        return
+        return 1
 
     DIR_DIAGRAMAS = os.path.join(DOCS_DIR, "diagramas")
 
     if not path.exists(DIR_DIAGRAMAS):
         print(f"No hay diagramas para procesar en: {DIR_DIAGRAMAS}")
-        return
+        return 1
 
-    OUT_PNG = path.join(DOCS_DIR, "out/diagramas/png")
-    OUT_PDF = path.join(DOCS_DIR, "out/diagramas/pdf")
+    OUT_DIAGRAMAS = os.path.abspath(args.out_dir) if args.out_dir else path.join(DOCS_DIR, "out/diagramas")
+    OUT_PNG = path.join(OUT_DIAGRAMAS, "png")
+    OUT_PDF = path.join(OUT_DIAGRAMAS, "pdf")
+
+    mmdc = buscar_mmdc()
+    if mmdc is None:
+        print("Se necesita Mermaid CLI para procesar los diagramas.")
+        print("Opción local: ejecuta ./setup-local.sh (Linux/macOS) o setup-local.cmd (Windows).")
+        print("Opción global: pnpm add -g @mermaid-js/mermaid-cli")
+        return 1
 
     preparar_directorios([OUT_PNG, OUT_PDF])
-    
+
     # Generar config para esquivar el error de chrome-headless-shell
     config_puppeteer = preparar_puppeteer(DOCS_DIR)
     print(f"Usando Mermaid CLI: {mmdc}")
-    
+    print(f"Carpeta de salida de diagramas: {OUT_DIAGRAMAS}")
+
     procesar_diagramas(DIR_DIAGRAMAS, OUT_PNG, OUT_PDF, config_puppeteer, mmdc)
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

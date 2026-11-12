@@ -2,9 +2,9 @@ import os
 import re
 import sys
 import html
+import argparse
 import base64
 import functools
-from sys import argv
 
 try:
     import ziamath as zm
@@ -149,61 +149,106 @@ def procesar_latex_en_markdown(
 
     return texto
 
+
+def guardar_salida(ruta, contenido):
+    """Guarda contenido de texto creando la carpeta de destino si es necesario."""
+    ruta = os.path.abspath(ruta)
+    directorio = os.path.dirname(ruta)
+    if directorio:
+        os.makedirs(directorio, exist_ok=True)
+    with open(ruta, "w", encoding="utf-8") as f:
+        f.write(contenido)
+    return ruta
+
+
 def main():
-    if len(argv) < 2:
-        print("Uso:")
-        print("  python procesar_latex.py <RUTA_DOCS_O_ARCHIVO>")
-        print("  python procesar_latex.py --expr \"E = mc^2\" [--inline] [--out salida.svg]")
-        return
+    parser = argparse.ArgumentParser(
+        description="Procesa fórmulas LaTeX y documentos Markdown.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""Ejemplos:
+  python procesar_latex.py docs
+  python procesar_latex.py documento.md --out documento-procesado.md
+  python procesar_latex.py --expr "E = mc^2" --out formula.svg
+""",
+    )
+    parser.add_argument(
+        "entrada",
+        nargs="?",
+        help="Carpeta de documentos, archivo .md o expresión LaTeX directa.",
+    )
+    parser.add_argument(
+        "--expr",
+        dest="expr",
+        default=None,
+        help="Renderiza una expresión LaTeX a SVG.",
+    )
+    parser.add_argument(
+        "--inline",
+        action="store_true",
+        help="Renderiza la expresión como fórmula en línea.",
+    )
+    parser.add_argument(
+        "-o", "--out",
+        dest="out",
+        default=None,
+        help=(
+            "Archivo de salida. Para --expr guarda el SVG; para un .md guarda "
+            "el Markdown procesado. Si se omite, se imprime en la salida estándar."
+        ),
+    )
+    args = parser.parse_args()
 
-    if argv[1] in ("--help", "-h"):
-        print("Compilador de LaTeX para documentos PDF")
-        print("Opciones:")
-        print("  python procesar_latex.py <RUTA_DOCS>           Verifica el entorno para procesar LaTeX")
-        print("  python procesar_latex.py <archivo.md>          Procesa las fórmulas de un archivo markdown")
-        print("  python procesar_latex.py --expr \"<LATEX>\"      Renderiza una expresión a SVG")
-        return
-
-    if argv[1] == "--expr":
-        if len(argv) < 3:
-            print("Error: Debes proporcionar una expresión LaTeX después de --expr.")
-            return
-        expr = argv[2]
-        inline = "--inline" in argv
+    if args.expr is not None:
         try:
-            svg = latex_a_svg(expr, inline=inline)
-            if "--out" in argv:
-                out_idx = argv.index("--out") + 1
-                if out_idx < len(argv):
-                    with open(argv[out_idx], "w", encoding="utf-8") as f:
-                        f.write(svg)
-                    print(f"SVG guardado en {argv[out_idx]}")
-                    return
-            print(svg)
+            svg = latex_a_svg(args.expr, inline=args.inline)
+            if args.out:
+                ruta = guardar_salida(args.out, svg)
+                print(f"SVG guardado en {ruta}")
+            else:
+                print(svg)
         except Exception as e:
             print(f"Error renderizando LaTeX: {e}", file=sys.stderr)
-            sys.exit(1)
-        return
+            return 1
+        return 0
 
-    entrada = argv[1]
+    if not args.entrada:
+        parser.print_help()
+        return 1
+
+    entrada = args.entrada
+
     if os.path.isfile(entrada):
         with open(entrada, "r", encoding="utf-8") as f:
             contenido = f.read()
         procesado = procesar_latex_en_markdown(contenido)
-        print(procesado)
-        return
+
+        if args.out:
+            ruta = guardar_salida(args.out, procesado)
+            print(f"Markdown procesado guardado en {ruta}")
+        else:
+            print(procesado)
+        return 0
 
     if os.path.isdir(entrada):
         if verificar_dependencias():
             print(f"Módulo procesar_latex listo. Directorio de documentos: {entrada}")
-        return
+        return 0
 
     # Si es una expresión directa sin comillas o simple
     if verificar_dependencias():
         try:
-            print(latex_a_svg(entrada, inline=False))
+            svg = latex_a_svg(entrada, inline=False)
+            if args.out:
+                ruta = guardar_salida(args.out, svg)
+                print(f"SVG guardado en {ruta}")
+            else:
+                print(svg)
         except Exception as e:
             print(f"Error procesando '{entrada}': {e}", file=sys.stderr)
+            return 1
+
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

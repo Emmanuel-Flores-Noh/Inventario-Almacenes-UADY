@@ -2,7 +2,7 @@
 
 Este es un template automatizado para generar documentos en formato PDF a partir de archivos Markdown y diagramas de Mermaid. 
 
-Está diseñado para funcionar de manera **100% portable** a través de Docker, con una tipografía limpia (Inter) y una paleta de colores profesional (Slate). Además, compila tus documentos automáticamente cada vez que haces un commit gracias a sus Git Hooks.
+Está diseñado para funcionar de manera **100% portable**, ya sea con Docker o con un entorno local aislado, con una tipografía limpia (Inter) y una paleta de colores profesional (Slate). Además, compila tus documentos automáticamente cada vez que haces un commit gracias a sus Git Hooks.
 
 ## Características
 
@@ -60,7 +60,7 @@ Para que el compilador funcione correctamente, debes respetar la siguiente estru
 ### Opción local
 
 - Python 3
-- Node.js 18.19 o superior y npm
+- Node.js 18.19 o superior y pnpm
 - Git
 - En Linux, las librerías del sistema que requiere WeasyPrint (Pango, Cairo y FFI)
 
@@ -105,9 +105,17 @@ También puedes procesar un solo documento:
 ```
 
 `setup-local` instala las dependencias de `requirements.txt` en `.venv`, instala
-`@mermaid-js/mermaid-cli` en `bin/node_modules` y verifica el navegador que usará
-Puppeteer. Los scripts de Python buscan `mmdc` primero en el `PATH` del sistema,
-luego en `bin/mmdc` y finalmente en `bin/node_modules/.bin/mmdc`.
+`@mermaid-js/mermaid-cli` en `bin/node_modules` usando `pnpm` y verifica el
+navegador que usará Puppeteer. Los scripts de Python buscan `mmdc` primero en el
+`PATH` del sistema, luego en `bin/mmdc` y finalmente en `bin/node_modules/.bin/mmdc`.
+
+Si no tienes `pnpm`, puedes activarlo con Corepack o instalarlo con npm:
+
+```bash
+corepack enable pnpm
+# o
+npm install -g pnpm
+```
 
 Puedes forzar una ruta específica con:
 
@@ -115,6 +123,39 @@ Puedes forzar una ruta específica con:
 export MMDC_PATH=/ruta/a/mmdc
 export PUPPETEER_EXECUTABLE_PATH=/ruta/a/chrome
 ```
+
+### Rutas de salida
+
+Los scripts aceptan `-o` / `--out` para elegir dónde generar sus archivos:
+
+```bash
+# PDFs de los documentos
+python tools/procesar_markdown.py docs --out salida/pdf
+
+# Diagramas PNG y PDF (se crean salida/diagramas/png y salida/diagramas/pdf)
+python tools/procesar_diagramas.py docs --out salida/diagramas
+
+# SVG de una fórmula o Markdown procesado
+python tools/procesar_latex.py --expr "E = mc^2" --out salida/formula.svg
+python tools/procesar_latex.py documento.md --out salida/documento-procesado.md
+```
+
+En `procesar_markdown.py`, `--out` controla los PDFs finales. Los diagramas que
+compile ese script se guardan por defecto en `<SALIDA>/diagramas`; puedes
+cambiarlos de forma independiente con `--diagramas-out`.
+
+### Documento de demostración
+
+El repositorio incluye `docs/markdown/Demo_Funcionalidades/`, un documento de
+ejemplo que reúne las funcionalidades principales: Markdown, tablas, código,
+imágenes locales, fórmulas LaTeX y diagramas Mermaid. También incluye una lista
+de comprobación para usarlo como prueba después de cambiar el proyecto.
+
+```bash
+./procesar-docs-local.sh docs/markdown/Demo_Funcionalidades
+```
+
+El PDF se genera en `docs/out/docs/Demo_Funcionalidades.pdf`.
 
 Si WeasyPrint falla al importarse en Debian/Ubuntu, instala las librerías del
 sistema con:

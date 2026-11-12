@@ -43,9 +43,26 @@ if ! "$VENV_PY" -c "import weasyprint" >/dev/null 2>&1; then
 fi
 
 echo ""
-echo "3. Instalando Mermaid CLI local en bin/ ..."
-if command -v npm >/dev/null 2>&1; then
-    npm install --prefix "$ROOT/bin" --no-audit --no-fund
+echo "3. Instalando Mermaid CLI local en bin/ con pnpm ..."
+PNPM_MODE=""
+if command -v pnpm >/dev/null 2>&1; then
+    PNPM_MODE="pnpm"
+elif command -v corepack >/dev/null 2>&1; then
+    echo "   pnpm no está instalado; intentando activarlo con corepack ..."
+    corepack enable pnpm >/dev/null 2>&1 || true
+    if command -v pnpm >/dev/null 2>&1; then
+        PNPM_MODE="pnpm"
+    else
+        PNPM_MODE="corepack"
+    fi
+fi
+
+if [ -n "$PNPM_MODE" ]; then
+    if [ "$PNPM_MODE" = "corepack" ]; then
+        (cd "$ROOT/bin" && corepack pnpm install)
+    else
+        (cd "$ROOT/bin" && pnpm install)
+    fi
 
     PUPPETEER_BIN="$ROOT/bin/node_modules/.bin/puppeteer"
     if [ -x "$PUPPETEER_BIN" ]; then
@@ -57,9 +74,12 @@ if command -v npm >/dev/null 2>&1; then
         fi
     fi
 else
-    echo "[Advertencia] No se encontró Node.js/npm."
-    echo "Mermaid CLI no se instalará localmente. Instala Node.js y vuelve a ejecutar este script,"
-    echo "o instala Mermaid globalmente con: sudo npm install -g @mermaid-js/mermaid-cli"
+    echo "[Advertencia] No se encontró pnpm."
+    echo "Mermaid CLI no se instalará localmente. Instala pnpm con:"
+    echo "  corepack enable pnpm"
+    echo "o, si no tienes corepack:"
+    echo "  npm install -g pnpm"
+    echo "Después vuelve a ejecutar este script."
 fi
 
 echo ""

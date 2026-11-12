@@ -1,0 +1,13 @@
+gantt
+    title Plan de compilación del documento
+    dateFormat  YYYY-MM-DD
+    axisFormat  %d/%m
+
+    section Preparación
+    Redactar contenido       :done,    t1, 2026-01-05, 3d
+    Revisar Markdown         :active,  t2, after t1, 2d
+
+    section Producción
+    Compilar diagramas       :         t3, after t2, 2d
+    Generar PDF              :         t4, after t3, 1d
+    Revisar resultado        :         t5, after t4, 2d

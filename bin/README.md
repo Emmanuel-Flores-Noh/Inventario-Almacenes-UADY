@@ -16,6 +16,13 @@ En Windows:
 setup-local.cmd
 ```
 
+El instalador usa `pnpm` si está disponible. Si no lo tienes, puedes activarlo
+con `corepack enable pnpm` o instalarlo con `npm install -g pnpm`.
+
+El archivo `pnpm-workspace.yaml` autoriza el script de instalación de Puppeteer
+para que pnpm no lo bloquee. Después, `setup-local` se encarga de descargar el
+navegador que necesita Mermaid.
+
 Los scripts de Python buscan `mmdc` en este orden:
 
 1. La variable de entorno `MMDC_PATH`.

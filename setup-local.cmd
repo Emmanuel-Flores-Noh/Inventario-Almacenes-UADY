@@ -51,28 +51,63 @@ if errorlevel 1 (
 )
 
 echo.
-echo 3. Instalando Mermaid CLI local en bin\ ...
-where npm >nul 2>nul
-if errorlevel 1 (
-    echo [Advertencia] No se encontro Node.js/npm.
-    echo Mermaid CLI no se instalara localmente. Instala Node.js y vuelve a ejecutar este script,
-    echo o instala Mermaid globalmente con: npm install -g @mermaid-js/mermaid-cli
-) else (
-    call npm install --prefix "%ROOT%bin" --no-audit --no-fund
-    if errorlevel 1 exit /b 1
+echo 3. Instalando Mermaid CLI local en bin\ con pnpm ...
+set "PNPM_CMD="
 
-    if exist "%ROOT%bin\node_modules\.bin\puppeteer.cmd" (
-        echo.
-        echo 4. Verificando navegador para Puppeteer ...
-        pushd "%ROOT%bin"
-        call "%ROOT%bin\node_modules\.bin\puppeteer.cmd" browsers install chrome
-        if errorlevel 1 (
-            echo [Advertencia] No se pudo descargar Chrome automaticamente.
-            echo Si Mermaid falla, define PUPPETEER_EXECUTABLE_PATH con la ruta de un navegador.
-        )
-        popd
-    )
+where pnpm >nul 2>nul
+if not errorlevel 1 (
+    set "PNPM_CMD=pnpm"
+    goto pnpm_listo
 )
+
+where corepack >nul 2>nul
+if errorlevel 1 goto pnpm_no_disponible
+
+echo    pnpm no esta instalado; intentando activarlo con corepack ...
+call corepack enable pnpm >nul 2>nul
+where pnpm >nul 2>nul
+if not errorlevel 1 (
+    set "PNPM_CMD=pnpm"
+    goto pnpm_listo
+)
+set "PNPM_CMD=corepack"
+goto pnpm_listo
+
+:pnpm_no_disponible
+echo [Advertencia] No se encontro pnpm.
+echo Mermaid CLI no se instalara localmente. Instala pnpm con:
+echo   corepack enable pnpm
+echo o, si no tienes corepack:
+echo   npm install -g pnpm
+echo Despues vuelve a ejecutar este script.
+goto fin_mermaid
+
+:pnpm_listo
+pushd "%ROOT%bin"
+if "%PNPM_CMD%"=="corepack" (
+    call corepack pnpm install
+) else (
+    call pnpm install
+)
+if errorlevel 1 (
+    popd
+    exit /b 1
+)
+popd
+
+if exist "%ROOT%bin\node_modules\.bin\puppeteer.cmd" (
+    echo.
+    echo 4. Verificando navegador para Puppeteer ...
+    pushd "%ROOT%bin"
+    call "%ROOT%bin\node_modules\.bin\puppeteer.cmd" browsers install chrome
+    if errorlevel 1 (
+        echo [Advertencia] No se pudo descargar Chrome automaticamente.
+        echo Si Mermaid falla, define PUPPETEER_EXECUTABLE_PATH con la ruta de un navegador.
+    )
+    popd
+)
+
+:fin_mermaid
 
 echo.
 echo ========================================

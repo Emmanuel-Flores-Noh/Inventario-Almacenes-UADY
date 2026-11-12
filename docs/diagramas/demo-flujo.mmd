@@ -1,0 +1,12 @@
+flowchart TD
+    A([Inicio]) --> B{¿El documento tiene diagramas?}
+    B -- Sí --> C[Compilar archivos .mmd]
+    C --> D[Generar PNG y PDF]
+    B -- No --> E[Omitir compilación]
+    D --> F[Convertir Markdown a HTML]
+    E --> F
+    F --> G[Generar PDF con WeasyPrint]
+    G --> H([Documento listo])
+
+    classDef destacado fill:#dbeafe,stroke:#2563eb,stroke-width:2px,color:#0f172a
+    class G destacado

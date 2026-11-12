@@ -33,6 +33,12 @@ Las fórmulas se compilan a gráficos vectoriales SVG incrustados con resolució
 * Si solo se tiene un archivo markdown dentro de un subdirectorio se debe de llamar README.md
 * Si se poseen varios archivos markdown se debe de llamar $numeroDeDocumento$_$nombreDescriptivo$.md siendo numeroDeDocumento el numero que define en que orden se insertan, preferente nombrarlo 01, 02, etc.
 
+### Documento de demostración
+En `markdown/Demo_Funcionalidades/` hay un documento de ejemplo que reúne las
+funcionalidades del proyecto: Markdown, tablas, código, imágenes locales,
+fórmulas LaTeX y diagramas Mermaid. También incluye una lista de comprobación
+para usarlo como prueba después de modificar el compilador.
+
 ## out
 Los documentos y diagramas convertidos en formatos de facil lectura
 

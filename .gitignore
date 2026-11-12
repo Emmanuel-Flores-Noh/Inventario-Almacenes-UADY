@@ -1,5 +1,6 @@
 .venv/
 bin/node_modules/
 bin/package-lock.json
+bin/pnpm-lock.yaml
 __pycache__/
 *.py[cod]

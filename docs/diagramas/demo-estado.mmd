@@ -1,0 +1,7 @@
+stateDiagram-v2
+    [*] --> Borrador
+    Borrador --> Revision : Enviar
+    Revision --> Borrador : Corregir
+    Revision --> Aprobado : Aprobar
+    Aprobado --> Publicado : Publicar
+    Publicado --> [*]
