@@ -9,11 +9,15 @@ import com.formdev.flatlaf.FlatLightLaf;
 import mx.uady.inventario.central.view.MercanciaPanel;
 import mx.uady.inventario.central.view.ProductosPanel;
 import mx.uady.inventario.central.view.VentaPanel;
+import mx.uady.inventario.central.view.VentaHistorial;
+import mx.uady.inventario.central.view.VentaHistorialPanel;
 import mx.uady.inventario.central.view.VentanaPrincipal;
 import mx.uady.inventario.central.view.components.QrPreviewDialog;
 import mx.uady.inventario.central.service.VentaService;
 import mx.uady.inventario.common.modelo.EstadoMercancia;
 import mx.uady.inventario.common.modelo.TiendaAlmacen;
+
+import javax.swing.JTabbedPane;
 
 /**
  * Arranca la interfaz Swing del Administrador.
@@ -99,7 +103,27 @@ public final class UiLauncher {
                         mx.uady.inventario.central.view.Mensajes.mostrarError(ventas, error);
                     }
                 });
-        ventana.setPestana("Ventas", ventas);
+        VentaHistorialPanel historial = new VentaHistorialPanel();
+        VentaHistorialController historialController = new VentaHistorialController(
+                () -> java.util.List.of(),
+                historial,
+                venta -> {
+                    try {
+                        var unidad = contexto.mercanciaService().asegurarQr(venta.numeroSerie());
+                        new QrPreviewDialog(
+                                SwingUtilities.getWindowAncestor(historial),
+                                unidad.numeroSerie(),
+                                unidad.idProducto(),
+                                venta.producto(),
+                                unidad.rutaQr()).setVisible(true);
+                    } catch (Exception error) {
+                        mx.uady.inventario.central.view.Mensajes.mostrarError(historial, error);
+                    }
+                });
+        JTabbedPane secciones = new JTabbedPane();
+        secciones.addTab("Registrar venta", ventas);
+        secciones.addTab("Historial", historial);
+        ventana.setPestana("Ventas", secciones);
 
         // Un producto nuevo aparece en los combos de Mercancía; una unidad nueva cambia el conteo en Productos.
         productoController.setAlCambiarProductos(mercanciaController::cargar);
@@ -108,6 +132,7 @@ public final class UiLauncher {
         productoController.cargar();
         mercanciaController.cargar();
         ventasController.cargar();
+        historialController.cargar();
 
         ventana.setVisible(true);
         return ventana;
