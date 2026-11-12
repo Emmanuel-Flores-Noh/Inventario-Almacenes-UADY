@@ -39,6 +39,12 @@
             <artifactId>javase</artifactId>
         </dependency>
 
+        <!-- Interfaz grafica del Administrador (Swing + FlatLaf) -->
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+        </dependency>
+
         <!-- Marshalling y Unmarshalling de mensajes JSON -->
         <dependency>
             <groupId>com.google.code.gson</groupId>

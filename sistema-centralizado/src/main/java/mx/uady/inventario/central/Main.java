@@ -1,5 +1,7 @@
 package mx.uady.inventario.central;
 
+import mx.uady.inventario.central.controller.UiLauncher;
+
 /**
  * Punto de entrada principal para el Sistema 1 (Sistema Centralizado / Proveedor).
  * Responsable del almacenamiento en MariaDB, generación de códigos QR (ZXing)
@@ -11,5 +13,7 @@ public class Main {
         System.out.println("  Iniciando Sistema Centralizado / Proveedor");
         System.out.println("  Sistema de Trazabilidad e Inventarios UADY");
         System.out.println("==================================================");
+
+        UiLauncher.iniciar();
     }
 }
