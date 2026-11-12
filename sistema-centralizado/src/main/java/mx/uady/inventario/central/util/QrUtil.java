@@ -30,18 +30,11 @@ public final class QrUtil {
      * @throws WriterException si ZXing no puede codificar el contenido
      * @throws IOException si no se puede escribir el archivo
      */
-    public static void escribirPng(String contenido, Path destino, int ancho, int alto)
-            throws WriterException, IOException {
-        Map<EncodeHintType, Object> hints = Map.of(
-                EncodeHintType.CHARACTER_SET, StandardCharsets.UTF_8.name()
-        );
-        BitMatrix matriz = new MultiFormatWriter().encode(
-                contenido,
-                BarcodeFormat.QR_CODE,
-                ancho,
-                alto,
-                hints
-        );
+    public static void escribirPng(String contenido, Path destino, int ancho, int alto) throws WriterException, IOException{
+        Map<EncodeHintType, Object> hints = Map.of(EncodeHintType.CHARACTER_SET, StandardCharsets.UTF_8.name());
+        BitMatrix matriz = new MultiFormatWriter().encode(contenido, BarcodeFormat.QR_CODE, ancho, alto,hints);
         MatrixToImageWriter.writeToPath(matriz, "PNG", destino);
     }
+       
+        
 }

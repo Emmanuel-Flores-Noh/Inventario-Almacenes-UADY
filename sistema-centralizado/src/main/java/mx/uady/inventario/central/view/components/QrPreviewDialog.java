@@ -40,13 +40,7 @@ public class QrPreviewDialog extends JDialog {
      * @param nombreProducto nombre del producto
      * @param rutaQr ruta del PNG generado
      */
-    public QrPreviewDialog(
-            Window owner,
-            String numeroSerie,
-            int idProducto,
-            String nombreProducto,
-            String rutaQr
-    ) {
+    public QrPreviewDialog(Window owner, String numeroSerie, int idProducto, String nombreProducto, String rutaQr) {
         super(owner, "Código QR - " + numeroSerie, Dialog.ModalityType.APPLICATION_MODAL);
         if (rutaQr == null || rutaQr.isBlank()) {
             throw new IllegalArgumentException("La ruta del código QR es obligatoria");
@@ -94,11 +88,7 @@ public class QrPreviewDialog extends JDialog {
         try {
             byte[] bytes = Files.readAllBytes(Path.of(rutaQr));
             ImageIcon icono = new ImageIcon(bytes);
-            return new ImageIcon(icono.getImage().getScaledInstance(
-                    IMAGE_SIZE,
-                    IMAGE_SIZE,
-                    Image.SCALE_SMOOTH
-            ));
+            return new ImageIcon(icono.getImage().getScaledInstance(IMAGE_SIZE, IMAGE_SIZE, Image.SCALE_SMOOTH));
         } catch (IOException error) {
             throw new IllegalArgumentException("No se pudo leer el código QR: " + rutaQr, error);
         }

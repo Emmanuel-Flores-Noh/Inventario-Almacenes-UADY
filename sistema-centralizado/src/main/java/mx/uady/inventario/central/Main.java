@@ -3,6 +3,8 @@ package mx.uady.inventario.central;
 import mx.uady.inventario.central.network.DespachadorSolicitudes;
 import mx.uady.inventario.central.network.RegistradorBroker;
 import mx.uady.inventario.central.network.ServidorServicio;
+import mx.uady.inventario.central.service.VentaService;
+import mx.uady.inventario.central.util.ConfiguracionBD;
 import mx.uady.inventario.central.util.ConfiguracionServicio;
 
 /**
@@ -16,15 +18,18 @@ public class Main {
 
     public static void main(String[] args) {
         ConfiguracionServicio configuracion;
+        ConfiguracionBD configuracionBD;
         try {
             configuracion = ConfiguracionServicio.desdeEntorno();
+            configuracionBD = ConfiguracionBD.desdeEntorno();
         } catch (RuntimeException e) {
             System.err.println("Configuracion invalida del Sistema 1: " + e.getMessage());
             System.exit(1);
             return;
         }
 
-        DespachadorSolicitudes despachador = DespachadorSolicitudes.estandar();
+        DespachadorSolicitudes despachador =
+                DespachadorSolicitudes.estandar(new VentaService(configuracionBD));
         ServidorServicio servidor = new ServidorServicio(
                 configuracion.puertoServicio(), configuracion.tamanoPool(), despachador);
 
