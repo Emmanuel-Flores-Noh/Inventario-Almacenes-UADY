@@ -14,16 +14,16 @@ Fase 2: Servidor de servicio del Sistema 1 (en curso).
 - [x] Paso 1: `ConfiguracionServicio` (`SERVICE_PORT`, `SERVICE_HOST`, `SERVICE_POOL_SIZE`, `BROKER_*`, reintentos de registro) + pruebas.
 - [x] Paso 2: `JsonServicio` y `DespachadorSolicitudes` con conversion de excepciones a `CodigoError` + pruebas.
 - [x] Paso 3: `ServidorServicio` concurrente y `ManejadorConexionServicio` + pruebas de socket.
-- [ ] Paso 4: `RegistradorBroker` con reintento acotado + pruebas con broker falso.
+- [x] Paso 4: `RegistradorBroker` con reintento acotado + pruebas con broker falso.
 - [ ] Paso 5: Cableado de `Main` (arranque, hook de apagado, registro en segundo plano).
 - [ ] Paso 6: Verificacion integrada broker + servicio con jars reales.
 - [ ] Paso 7: Cierre de fase en PROGRESS.md con evidencia por criterio.
 
 ## Paso en curso
-- Paso 4: `RegistradorBroker`.
+- Paso 5: cableado de `Main`.
 
 ## Siguiente paso
-- Implementar el registro en el broker con reintento acotado y sus pruebas.
+- Arrancar servidor, registrar en segundo plano y agregar hook de apagado.
 
 ## Decisiones y suposiciones
 - Los modelos de las 7 tablas se reutilizan de `common.modelo`; no se duplican en `central.model`.
