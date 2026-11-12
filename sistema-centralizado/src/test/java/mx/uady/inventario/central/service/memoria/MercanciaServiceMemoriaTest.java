@@ -22,6 +22,7 @@ import com.google.zxing.qrcode.QRCodeReader;
 
 import mx.uady.inventario.central.service.AccesoDatosException;
 import mx.uady.inventario.central.service.NegocioException;
+import mx.uady.inventario.central.service.QrService;
 import mx.uady.inventario.central.service.SerieDuplicadaException;
 import mx.uady.inventario.central.service.ValidacionException;
 import mx.uady.inventario.common.modelo.EstadoMercancia;
@@ -38,7 +39,7 @@ class MercanciaServiceMemoriaTest {
     @BeforeEach
     void preparar() {
         almacen = AlmacenMemoria.conDatosDeEjemplo(Duration.ZERO);
-        servicio = new MercanciaServiceMemoria(almacen, new QrServiceTemporal(directorioQr));
+        servicio = new MercanciaServiceMemoria(almacen, new QrService(directorioQr));
     }
 
     @Test
@@ -48,12 +49,12 @@ class MercanciaServiceMemoriaTest {
         assertEquals("SN-NUEVA-01", unidad.numeroSerie());
         assertEquals(EstadoMercancia.EN_ALMACEN, unidad.estado());
         Path qr = Path.of(unidad.rutaQr());
-        assertTrue(Files.size(qr) > 0);
+        assertEquals(directorioQr.resolve("SN-NUEVA-01.png"), qr);
 
         BufferedImage imagen = ImageIO.read(qr.toFile());
         String contenido = new QRCodeReader().decode(new BinaryBitmap(
                 new HybridBinarizer(new BufferedImageLuminanceSource(imagen)))).getText();
-        assertEquals("SN-NUEVA-01", contenido);
+        assertEquals("ID: 2 | Producto: Proyector Epson PowerLite | SN: SN-NUEVA-01", contenido);
     }
 
     @Test
@@ -71,13 +72,19 @@ class MercanciaServiceMemoriaTest {
     }
 
     @Test
-    void siFallaElQrNoRegistraLaUnidad() {
-        MercanciaServiceMemoria conQrRoto = new MercanciaServiceMemoria(almacen, serie -> {
-            throw new AccesoDatosException("disco lleno", null);
-        });
+    void siNoSePuedeEscribirElQrNoRegistraLaUnidad() throws Exception {
+        // Un archivo en lugar de la carpeta de QR hace fallar la escritura.
+        Path noEsCarpeta = Files.createFile(directorioQr.resolve("ocupado"));
+        MercanciaServiceMemoria conQrRoto = new MercanciaServiceMemoria(almacen, new QrService(noEsCarpeta));
 
         assertThrows(AccesoDatosException.class, () -> conQrRoto.registrar(1, "SN-SIN-QR"));
         assertTrue(servicio.listar(null, null).stream().noneMatch(m -> m.numeroSerie().equals("SN-SIN-QR")));
+    }
+
+    @Test
+    void unaSerieQueNoSirveComoNombreDeArchivoSeRechazaComoValidacion() {
+        assertThrows(ValidacionException.class, () -> servicio.registrar(1, "../fuera"));
+        assertTrue(servicio.listar(null, null).stream().noneMatch(m -> m.numeroSerie().contains("fuera")));
     }
 
     @Test
@@ -87,10 +94,5 @@ class MercanciaServiceMemoriaTest {
         assertEquals(6, servicio.listar(null, EstadoMercancia.EN_ALMACEN).size());
         assertEquals(1, servicio.listar(1, EstadoMercancia.VENDIDO).size());
         assertEquals("SN-UADY-0002", servicio.listar(1, EstadoMercancia.VENDIDO).get(0).numeroSerie());
-    }
-
-    @Test
-    void elNombreDelArchivoQrEsSeguro() {
-        assertEquals("SN_01_A.png", QrServiceTemporal.nombreArchivo("SN/01:A"));
     }
 }

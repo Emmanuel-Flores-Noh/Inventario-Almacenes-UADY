@@ -10,7 +10,6 @@ import mx.uady.inventario.central.service.QrService;
 import mx.uady.inventario.central.service.memoria.AlmacenMemoria;
 import mx.uady.inventario.central.service.memoria.MercanciaServiceMemoria;
 import mx.uady.inventario.central.service.memoria.ProductoServiceMemoria;
-import mx.uady.inventario.central.service.memoria.QrServiceTemporal;
 
 /**
  * Único lugar donde se construyen los servicios que usa la interfaz.
@@ -27,10 +26,13 @@ public record AppContext(ProductoService productoService, MercanciaService merca
         Objects.requireNonNull(qrService, "qrService");
     }
 
-    /** Servicios en memoria con los datos de ejemplo de {@code 02_seed.sql}. */
+    /**
+     * Servicios en memoria con los datos de ejemplo de {@code 02_seed.sql}.
+     * Usa el {@link QrService} real (#4) escribiendo en una carpeta temporal local.
+     */
     public static AppContext enMemoria() {
         AlmacenMemoria almacen = AlmacenMemoria.conDatosDeEjemplo(LATENCIA_SIMULADA);
-        QrService qr = new QrServiceTemporal(Path.of(System.getProperty("java.io.tmpdir"), "inventario-uady", "qr"));
+        QrService qr = new QrService(Path.of(System.getProperty("java.io.tmpdir"), "inventario-uady", "qr"));
         return new AppContext(new ProductoServiceMemoria(almacen), new MercanciaServiceMemoria(almacen, qr), qr);
     }
 }

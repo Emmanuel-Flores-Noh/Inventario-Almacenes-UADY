@@ -23,6 +23,12 @@
     </properties>
 
     <dependencies>
+        <!-- Estilo y tema FlatLaf para componentes Swing reutilizables -->
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+        </dependency>
+
         <!-- Persistencia con MariaDB JDBC -->
         <dependency>
             <groupId>org.mariadb.jdbc</groupId>
@@ -37,12 +43,6 @@
         <dependency>
             <groupId>com.google.zxing</groupId>
             <artifactId>javase</artifactId>
-        </dependency>
-
-        <!-- Interfaz grafica del Administrador (Swing + FlatLaf) -->
-        <dependency>
-            <groupId>com.formdev</groupId>
-            <artifactId>flatlaf</artifactId>
         </dependency>
 
         <!-- Marshalling y Unmarshalling de mensajes JSON -->
