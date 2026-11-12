@@ -11,17 +11,17 @@
 Fase 3: Resiliencia en el Broker.
 
 ## Pasos de la fase actual
-- [ ] Paso 1: `ConfiguracionBroker` con timeouts de conexion/lectura, reintentos y salud de proveedores + pruebas.
+- [x] Paso 1: `ConfiguracionBroker` con timeouts de conexion/lectura, reintentos y salud de proveedores + pruebas.
 - [ ] Paso 2: Salud de proveedores en `RegistroServicios` (fallos consecutivos, enfriamiento y reactivacion) + pruebas.
 - [ ] Paso 3: `Enrutador` con timeouts separados, reintentos limitados y marca de no disponible + pruebas.
 - [ ] Paso 4: Cableado de `BrokerServer` y `Main` con `ConfiguracionBroker` desde variables de entorno.
 - [ ] Paso 5: Verificacion con jars reales y cierre de fase con evidencia por criterio.
 
 ## Paso en curso
-- Paso 1: `ConfiguracionBroker` con timeouts de conexion/lectura, reintentos y salud de proveedores + pruebas.
+- Paso 2: Salud de proveedores en `RegistroServicios` (fallos consecutivos, enfriamiento y reactivacion) + pruebas.
 
 ## Siguiente paso
-- Implementar `ConfiguracionBroker` y su prueba unitaria.
+- Implementar la salud de proveedores en `RegistroServicios` y ampliar sus pruebas.
 
 ## Decisiones y suposiciones
 - Los modelos de las 7 tablas se reutilizan de `common.modelo`; no se duplican en `central.model`.
