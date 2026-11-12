@@ -7,6 +7,7 @@ import mx.uady.inventario.broker.util.ConfiguracionBroker;
 import mx.uady.inventario.common.contrato.EstadoRespuesta;
 import mx.uady.inventario.common.contrato.Respuesta;
 import mx.uady.inventario.common.contrato.Solicitud;
+import mx.uady.inventario.common.error.CodigoError;
 import mx.uady.inventario.common.json.GsonFactory;
 import mx.uady.inventario.common.servicio.Operaciones;
 import mx.uady.inventario.common.servicio.Servicios;
@@ -46,6 +47,8 @@ class IntegracionFase5Test {
 
     private static final int CLIENTES_SIMULTANEOS = 20;
     private static final int ESPERA_RESPUESTA_SEGUNDOS = 20;
+    private static final int TIMEOUT_LECTURA_CAIDA_MS = 500;
+    private static final long BLOQUEO_MANEJADOR_CAIDA_MS = 3000;
 
     /**
      * Abre un socket al broker, envia una solicitud y devuelve la respuesta.
@@ -87,6 +90,44 @@ class IntegracionFase5Test {
                 0,          // sin espera entre intentos
                 10,         // no marcar al proveedor como no disponible en estas pruebas
                 30_000);
+    }
+
+    /**
+     * Configuracion para la prueba de caida: timeout de lectura corto y sin
+     * reintentos, para que el cliente reciba el `TIMEOUT` del primer intento.
+     */
+    private static ConfiguracionBroker configuracionBrokerCaida() {
+        return new ConfiguracionBroker(
+                0,
+                4,
+                2000,
+                TIMEOUT_LECTURA_CAIDA_MS,
+                0,          // sin reintentos: un reintento contra el servicio apagado daria ERROR_INTERNO
+                0,
+                10,
+                30_000);
+    }
+
+    /**
+     * Bloquea el hilo del manejador sin responder, ignorando las interrupciones.
+     *
+     * <p>Simula una operacion que ya entro al servicio y que sigue en curso
+     * cuando el Sistema 1 se apaga. ServerServicio.detener() cierra el puerto de
+     * escucha pero no el socket de una conexion bloqueada, asi que el broker solo
+     * puede cortar por su timeout de lectura.</p>
+     *
+     * @param millis tiempo de bloqueo
+     */
+    private static void esperarSinResponder(long millis) {
+        long fin = System.currentTimeMillis() + millis;
+        while (System.currentTimeMillis() < fin) {
+            try {
+                Thread.sleep(50);
+            } catch (InterruptedException ignorada) {
+                // Se ignora a proposito: la operacion no responde aunque el
+                // servidor este apagandose.
+            }
+        }
     }
 
     @Test
@@ -139,6 +180,68 @@ class IntegracionFase5Test {
             ejecutor.shutdownNow();
             broker.detener();
             servicio.detener();
+        }
+    }
+
+    @Test
+    void apagarElSistemaAUmitadDeUnaSolicitudDevuelveTimeout() throws Exception {
+        CountDownLatch recibida = new CountDownLatch(1);
+        DespachadorSolicitudes despachador = new DespachadorSolicitudes();
+        despachador.registrarOperacion(Servicios.INVENTARIO, Operaciones.LISTAR_INVENTARIO,
+                parametros -> {
+                    recibida.countDown();
+                    esperarSinResponder(BLOQUEO_MANEJADOR_CAIDA_MS);
+                    return new JsonPrimitive("tarde");
+                });
+
+        ServidorServicio servicio = new ServidorServicio(0, 2, despachador);
+        servicio.iniciar();
+
+        BrokerServer broker = new BrokerServer(configuracionBrokerCaida());
+        broker.iniciar();
+        broker.getRegistro().registrar(new Proveedor(
+                Servicios.INVENTARIO, "localhost", servicio.getPuerto()));
+
+        ExecutorService ejecutor = Executors.newSingleThreadExecutor();
+        Thread hiloDetencion = null;
+
+        try {
+            long inicio = System.nanoTime();
+            Future<Respuesta> futuro = ejecutor.submit(() -> enviar(broker.getPuerto(),
+                    Solicitud.crear("req-apagado", Servicios.INVENTARIO,
+                            Operaciones.LISTAR_INVENTARIO, null)));
+
+            assertTrue(recibida.await(5, TimeUnit.SECONDS),
+                    "el servicio no llego a recibir la solicitud");
+
+            // El Sistema 1 se apaga con la solicitud ya en curso.
+            hiloDetencion = new Thread(servicio::detener, "detener-servicio");
+            hiloDetencion.start();
+
+            Respuesta respuesta = futuro.get(ESPERA_RESPUESTA_SEGUNDOS, TimeUnit.SECONDS);
+            long transcurridoMs = (System.nanoTime() - inicio) / 1_000_000;
+            System.out.println("Apagado a mitad de solicitud: " + respuesta.getCodigoError()
+                    + " en " + transcurridoMs + " ms (timeout configurado "
+                    + TIMEOUT_LECTURA_CAIDA_MS + " ms)");
+
+            assertEquals("req-apagado", respuesta.getIdSolicitud());
+            assertEquals(EstadoRespuesta.ERROR, respuesta.getEstado());
+            assertEquals(CodigoError.TIMEOUT, respuesta.getCodigoError(),
+                    "se esperaba TIMEOUT, pero llego " + respuesta.getCodigoError()
+                            + ": " + respuesta.getMensajeError());
+            assertTrue(transcurridoMs >= TIMEOUT_LECTURA_CAIDA_MS - 100,
+                    "el broker respondio antes del timeout configurado: " + transcurridoMs + " ms");
+            assertTrue(transcurridoMs < 4000,
+                    "el broker tardo demasiado en cortar por timeout: " + transcurridoMs + " ms");
+        } finally {
+            ejecutor.shutdownNow();
+            if (hiloDetencion != null) {
+                hiloDetencion.join(10_000);
+            }
+            broker.detener();
+            if (servicio.isActivo()) {
+                servicio.detener();
+            }
         }
     }
 }
