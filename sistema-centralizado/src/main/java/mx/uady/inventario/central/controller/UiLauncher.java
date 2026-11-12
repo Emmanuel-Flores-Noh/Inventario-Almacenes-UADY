@@ -6,6 +6,7 @@ import javax.swing.SwingUtilities;
 
 import com.formdev.flatlaf.FlatLightLaf;
 
+import mx.uady.inventario.central.view.ProductosPanel;
 import mx.uady.inventario.central.view.VentanaPrincipal;
 
 /**
@@ -30,8 +31,20 @@ public final class UiLauncher {
         }
         SwingUtilities.invokeLater(() -> {
             FlatLightLaf.setup();
-            new VentanaPrincipal().setVisible(true);
+            abrirVentana(AppContext.enMemoria());
         });
         return true;
+    }
+
+    /** Construye las pantallas, conecta sus controladores y muestra la ventana. Hilo de Swing. */
+    static VentanaPrincipal abrirVentana(AppContext contexto) {
+        VentanaPrincipal ventana = new VentanaPrincipal();
+
+        ProductosPanel productos = new ProductosPanel();
+        new ProductoController(contexto.productoService(), productos).cargar();
+        ventana.setPestana("Productos", productos);
+
+        ventana.setVisible(true);
+        return ventana;
     }
 }
