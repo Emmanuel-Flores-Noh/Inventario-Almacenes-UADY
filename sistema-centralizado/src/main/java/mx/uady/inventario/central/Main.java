@@ -1,5 +1,6 @@
 package mx.uady.inventario.central;
 
+import mx.uady.inventario.central.controller.UiLauncher;
 import mx.uady.inventario.central.network.DespachadorSolicitudes;
 import mx.uady.inventario.central.network.RegistradorBroker;
 import mx.uady.inventario.central.network.ServidorServicio;
@@ -53,6 +54,7 @@ public class Main {
         System.out.println("  Servicios: " + String.join(", ", RegistradorBroker.serviciosDelSistema()));
         System.out.println("==================================================");
 
+        UiLauncher.iniciar();
         try {
             Thread.currentThread().join();
         } catch (InterruptedException e) {
