@@ -1,0 +1,7 @@
+{
+    "args": [
+        "--no-sandbox",
+        "--disable-setuid-sandbox"
+    ],
+    "executablePath": "/data/data/com.termux/files/usr/bin/chromium-browser"
+}
