@@ -3,25 +3,25 @@
 ## Estado por fase
 - [x] Fase 1: Persistencia
 - [x] Fase 2: Servidor de servicio del Sistema 1
-- [ ] Fase 3: Resiliencia en el Broker (en curso)
+- [x] Fase 3: Resiliencia en el Broker
 - [ ] Fase 4: Despliegue
 - [ ] Fase 5: Pruebas
 
 ## Fase actual
-Fase 3: Resiliencia en el Broker.
+Ninguna iniciada. La Fase 3 esta completada y verificada.
 
 ## Pasos de la fase actual
 - [x] Paso 1: `ConfiguracionBroker` con timeouts de conexion/lectura, reintentos y salud de proveedores + pruebas.
 - [x] Paso 2: Salud de proveedores en `RegistroServicios` (fallos consecutivos, enfriamiento y reactivacion) + pruebas.
 - [x] Paso 3: `Enrutador` con timeouts separados, reintentos limitados y marca de no disponible + pruebas.
 - [x] Paso 4: Cableado de `BrokerServer` y `Main` con `ConfiguracionBroker` desde variables de entorno.
-- [ ] Paso 5: Verificacion con jars reales y cierre de fase con evidencia por criterio.
+- [x] Paso 5: Verificacion con jars reales y cierre de fase con evidencia por criterio.
 
 ## Paso en curso
-- Paso 5: Verificacion con jars reales y cierre de fase con evidencia por criterio.
+- Ninguno.
 
 ## Siguiente paso
-- `mvn clean package` y verificacion con procesos reales de timeout, reintentos y no disponible.
+- Esperar instrucciones para iniciar la Fase 4 (despliegue).
 
 ## Decisiones y suposiciones
 - Los modelos de las 7 tablas se reutilizan de `common.modelo`; no se duplican en `central.model`.
@@ -55,12 +55,14 @@ Fase 3: Resiliencia en el Broker.
 
 ## Problemas abiertos
 - `docker-compose.yml` no define `SERVICE_HOST`; dentro de Docker el proveedor se anunciaria como `localhost` y el broker no lo alcanzaria. Debe resolverse en la Fase 4 (despliegue).
+- `docker-compose.yml` tampoco define las variables nuevas del broker (`BROKER_TIMEOUT_*`, `BROKER_REINTENTOS`, `BROKER_FALLOS_PARA_INDISPONIBLE`, `BROKER_INDISPONIBLE_MS`); sin ellas el broker usa los defaults. Se ajusta en la Fase 4.
 - Las 4 operaciones del contrato siguen sin logica de negocio: responden `OPERACION_NO_SOPORTADA` hasta que existan repositorios y servicios.
 
 ## Como verificar lo hecho
 - mvn test
 - mvn clean package
 - `java -jar broker/target/broker.jar` con `BROKER_PORT` y, en otra terminal, `java -jar sistema-centralizado/target/sistema-centralizado.jar` con `SERVICE_PORT`, `SERVICE_HOST`, `BROKER_HOST`, `BROKER_PORT`.
+- Resiliencia del broker: `BROKER_TIMEOUT_CONEXION_MS`, `BROKER_TIMEOUT_LECTURA_MS`, `BROKER_REINTENTOS`, `BROKER_ESPERA_REINTENTO_MS`, `BROKER_FALLOS_PARA_INDISPONIBLE`, `BROKER_INDISPONIBLE_MS`. El arranque imprime los valores efectivos.
 - Sin broker levantado, el servicio reintenta y luego reporta el fallo en `stderr` sin apagarse.
 - docker compose up -d mariadb
 - Aplicar `docker/mariadb/init/02_seed.sql` y consultar conteos
@@ -80,3 +82,13 @@ Fase 3: Resiliencia en el Broker.
 - Verificacion integrada real (puertos 6100/5100): el servicio arranco antes que el broker y reintento; al levantar el broker imprimio `Proveedor registrado en el broker localhost:5100 como localhost:6100 (gestorTiendas, inventario, gestorPrecios)`.
 - Solicitud enviada al broker y enrutada al servicio real: respuesta `{"idSolicitud":"e2e-fase2","estado":"ERROR","codigoError":"OPERACION_NO_SOPORTADA","mensajeError":"Operacion pendiente de implementar: listarInventario",...}`. Esto comprueba registro, enrutamiento broker->proveedor, despacho y conservacion del `idSolicitud`.
 - Con el broker apagado y `REGISTRO_INTENTOS=2`, el servicio imprimio en `stderr`: `No se pudo registrar en el broker localhost:5199 tras 2 intentos; el servicio seguira escuchando en el puerto 6101`.
+
+## Evidencia de la Fase 3
+- `mvn test`: BUILD SUCCESS. `common` 10 pruebas, `sistema-centralizado` 34 pruebas (1 omitida: la de integracion con MariaDB), `broker` 38 pruebas. Sin fallos.
+- `mvn clean package`: BUILD SUCCESS; genera `broker/target/broker.jar`.
+- Pruebas nuevas en verde: `ConfiguracionBrokerTest` (6), `RegistroServiciosTest` ampliado (15) y `EnrutadorTest` ampliado (9); `BrokerServerTest` (4) incluye el cableado de la configuracion.
+- Criterio "timeouts de conexion y lectura configurables": con un proveedor que no responde, `BROKER_TIMEOUT_LECTURA_MS=800` devolvio `TIMEOUT` en `elapsed_ms=1022`; con `BROKER_TIMEOUT_LECTURA_MS=2500` devolvio `TIMEOUT` en `elapsed_ms=2736`. El arranque imprimio los valores efectivos: `timeout conexion 2000 ms, timeout lectura 800 ms` y luego `2500 ms`.
+- Criterio "reintentos limitados": con `BROKER_REINTENTOS=2`, `BROKER_TIMEOUT_LECTURA_MS=500` y un proveedor que cierra cada conexion sin responder, el proveedor registro `conexiones=3` (1 intento + 2 reintentos) y el cliente recibio `ERROR_INTERNO`.
+- Criterio "proveedor que falla repetidamente se marca no disponible": con `BROKER_FALLOS_PARA_INDISPONIBLE=2`, `BROKER_REINTENTOS=0` y un proveedor que cierra sin responder, la 1a y 2a solicitud devolvieron `ERROR_INTERNO` y la 3a devolvio `{"codigoError":"PROVEEDOR_NO_REGISTRADO","mensajeError":"Proveedor no disponible: inventario"}`; el proveedor solo conto `conexiones=2`, es decir, la 3a solicitud ya no lo contacto.
+- El enfriamiento (`BROKER_INDISPONIBLE_MS`) es configurable y su vencimiento reactiva al proveedor; cubierto por `elEnfriamientoVenceYReactiva` con reloj inyectado. Un nuevo `registrarProveedor`/`actualizarProveedor` tambien lo reactiva.
+- La verificacion manual se hizo con un arnes temporal fuera del repositorio (`%TEMP%\opencode\fase3\Verificar.java`), no versionado.
