@@ -11,7 +11,7 @@
 Fase 2: Servidor de servicio del Sistema 1 (en curso).
 
 ## Pasos de la fase actual
-- [ ] Paso 1: `ConfiguracionServicio` (`SERVICE_PORT`, `SERVICE_HOST`, `SERVICE_POOL_SIZE`, `BROKER_*`, reintentos de registro) + pruebas.
+- [x] Paso 1: `ConfiguracionServicio` (`SERVICE_PORT`, `SERVICE_HOST`, `SERVICE_POOL_SIZE`, `BROKER_*`, reintentos de registro) + pruebas.
 - [ ] Paso 2: `JsonServicio` y `DespachadorSolicitudes` con conversion de excepciones a `CodigoError` + pruebas.
 - [ ] Paso 3: `ServidorServicio` concurrente y `ManejadorConexionServicio` + pruebas de socket.
 - [ ] Paso 4: `RegistradorBroker` con reintento acotado + pruebas con broker falso.
@@ -20,10 +20,10 @@ Fase 2: Servidor de servicio del Sistema 1 (en curso).
 - [ ] Paso 7: Cierre de fase en PROGRESS.md con evidencia por criterio.
 
 ## Paso en curso
-- Paso 1: `ConfiguracionServicio` y sus pruebas.
+- Paso 2: `JsonServicio` y `DespachadorSolicitudes`.
 
 ## Siguiente paso
-- Implementar `central/util/ConfiguracionServicio`.
+- Implementar el despacho de operaciones con conversion de errores.
 
 ## Decisiones y suposiciones
 - Los modelos de las 7 tablas se reutilizan de `common.modelo`; no se duplican en `central.model`.
@@ -35,6 +35,10 @@ Fase 2: Servidor de servicio del Sistema 1 (en curso).
 - Hay piezas de mercancia con estado `VENDIDO` que son ilustrativas: no tienen una venta registrada. En la Fase 2, cuando se implemente el registro de ventas, hay que decidir si se mantienen asi o se agregan ventas correspondientes en el seed.
 - `02_seed.sql` es idempotente con IDs explicitos e `INSERT ... ON DUPLICATE KEY UPDATE`; se aplico dos veces y los conteos no cambiaron.
 - `ConexionBDIntegracionTest` se activa solo con `DB_PASSWORD` definida (`@EnabledIfEnvironmentVariable`), de modo que `mvn test` sigue funcionando sin MariaDB.
+- Variables nuevas de la Fase 2: `SERVICE_PORT` (6000), `SERVICE_HOST` (localhost), `SERVICE_POOL_SIZE` (16), `BROKER_HOST` (localhost), `BROKER_PORT` (5000), `REGISTRO_INTENTOS` (30) y `REGISTRO_ESPERA_MS` (2000).
+- `SERVICE_HOST` es el host con el que el proveedor se anuncia al broker; en Docker debe ser `sistema-centralizado`, pero ese valor se configura en la Fase 4 (despliegue).
+- La Fase 2 solo implementa el servidor y el despacho: las 4 operaciones del contrato se reconocen pero responden `OPERACION_NO_SOPORTADA` hasta que existan los repositorios/servicios de negocio.
+- `ConfiguracionServicio` acepta `SERVICE_PORT=0` para pedir un puerto efimero en pruebas.
 
 ## Problemas abiertos
 - (ninguno)
