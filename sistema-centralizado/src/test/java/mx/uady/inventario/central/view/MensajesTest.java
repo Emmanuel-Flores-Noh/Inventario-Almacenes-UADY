@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutionException;
 
 import org.junit.jupiter.api.Test;
 
+import mx.uady.inventario.central.service.AccesoDatosException;
 import mx.uady.inventario.central.service.NegocioException;
 
 class MensajesTest {
@@ -29,6 +30,14 @@ class MensajesTest {
         assertEquals(Mensajes.ERROR_CONEXION, Mensajes.describir(new SQLException("Connection refused")));
         assertEquals(Mensajes.ERROR_CONEXION,
                 Mensajes.describir(new RuntimeException(new ConnectException("Connection refused"))));
+    }
+
+    @Test
+    void distingueFallosDeAlmacenamientoDeLosDeConexion() {
+        assertEquals(Mensajes.ERROR_ALMACENAMIENTO,
+                Mensajes.describir(new AccesoDatosException("QR", new java.io.IOException("disco lleno"))));
+        assertEquals(Mensajes.ERROR_CONEXION,
+                Mensajes.describir(new AccesoDatosException("listar", new SQLException("Connection refused"))));
     }
 
     @Test

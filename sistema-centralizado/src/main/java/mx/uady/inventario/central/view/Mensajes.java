@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
+import mx.uady.inventario.central.service.AccesoDatosException;
 import mx.uady.inventario.central.service.NegocioException;
 
 /**
@@ -19,6 +20,8 @@ public final class Mensajes {
 
     static final String ERROR_CONEXION =
             "No se pudo conectar con la base de datos. Verifica que esté en ejecución e inténtalo de nuevo.";
+    static final String ERROR_ALMACENAMIENTO =
+            "No se pudo guardar o leer la información. Inténtalo de nuevo; si persiste, consulta el registro.";
     static final String ERROR_INESPERADO =
             "Ocurrió un error inesperado. Consulta el registro para más detalles.";
 
@@ -55,6 +58,9 @@ public final class Mensajes {
         }
         if (buscar(error, SQLException.class) != null || buscar(error, ConnectException.class) != null) {
             return ERROR_CONEXION;
+        }
+        if (buscar(error, AccesoDatosException.class) != null) {
+            return ERROR_ALMACENAMIENTO;
         }
         return ERROR_INESPERADO;
     }
