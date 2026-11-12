@@ -41,3 +41,8 @@ Thumbs.db
 ### Logs & DB runtime ###
 *.log
 docker/mariadb/data/
+
+### Variables de entorno locales ###
+.env
+.env.*
+!.env.example
