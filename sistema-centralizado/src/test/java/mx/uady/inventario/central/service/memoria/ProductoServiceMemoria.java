@@ -15,7 +15,7 @@ import mx.uady.inventario.common.modelo.HistorialPrecio;
 import mx.uady.inventario.common.modelo.Mercancia;
 import mx.uady.inventario.common.modelo.Producto;
 
-/** {@link ProductoService} sobre {@link AlmacenMemoria}; se sustituye por la versión JDBC en la Fase 6. */
+/** {@link ProductoService} sobre {@link AlmacenMemoria}, para pruebas sin base de datos. */
 public final class ProductoServiceMemoria implements ProductoService {
 
     private final AlmacenMemoria almacen;

@@ -1,6 +1,8 @@
 package mx.uady.inventario.central.view;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.ConnectException;
 import java.sql.SQLException;
@@ -41,6 +43,17 @@ class MensajesTest {
                 Mensajes.describir(new AccesoDatosException("guardar", new SQLException("Data too long", "22001"))));
         assertEquals(Mensajes.ERROR_CONEXION,
                 Mensajes.describir(new AccesoDatosException("listar", new SQLException("Connection lost", "08S01"))));
+    }
+
+    @Test
+    void unErrorRecienCerradoNoSeRepiteHastaQuePasaElSilencio() {
+        String texto = "Error de prueba " + System.nanoTime();
+        assertTrue(Mensajes.debeMostrarse(texto, 1_000_000));
+
+        Mensajes.marcarCerrado(texto, 1_000_000);
+        assertFalse(Mensajes.debeMostrarse(texto, 1_000_000 + Mensajes.SILENCIO_TRAS_CERRAR_MS - 1));
+        assertTrue(Mensajes.debeMostrarse(texto, 1_000_000 + Mensajes.SILENCIO_TRAS_CERRAR_MS));
+        assertTrue(Mensajes.debeMostrarse("Otro texto " + System.nanoTime(), 1_000_000));
     }
 
     @Test

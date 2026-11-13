@@ -1,10 +1,10 @@
 package mx.uady.inventario.central;
 
+import mx.uady.inventario.central.controller.AppContext;
 import mx.uady.inventario.central.controller.UiLauncher;
 import mx.uady.inventario.central.network.DespachadorSolicitudes;
 import mx.uady.inventario.central.network.RegistradorBroker;
 import mx.uady.inventario.central.network.ServidorServicio;
-import mx.uady.inventario.central.service.VentaService;
 import mx.uady.inventario.central.util.ConfiguracionBD;
 import mx.uady.inventario.central.util.ConfiguracionServicio;
 
@@ -42,8 +42,9 @@ public class Main {
             return;
         }
 
-        VentaService ventaService = new VentaService(configuracionBD);
-        DespachadorSolicitudes despachador = DespachadorSolicitudes.estandar(ventaService);
+        // La interfaz y el servidor de red comparten los mismos servicios sobre MariaDB.
+        AppContext contexto = AppContext.jdbc(configuracionBD, AppContext.directorioQr(System.getenv()));
+        DespachadorSolicitudes despachador = DespachadorSolicitudes.estandar(contexto.ventaService());
         ServidorServicio servidor = new ServidorServicio(
                 configuracion.puertoServicio(), configuracion.tamanoPool(), despachador);
 
@@ -72,7 +73,7 @@ public class Main {
         System.out.println("  Servicios: " + String.join(", ", RegistradorBroker.serviciosDelSistema()));
         System.out.println("==================================================");
 
-        UiLauncher.iniciar(ventaService);
+        UiLauncher.iniciar(contexto);
         try {
             Thread.currentThread().join();
         } catch (InterruptedException e) {

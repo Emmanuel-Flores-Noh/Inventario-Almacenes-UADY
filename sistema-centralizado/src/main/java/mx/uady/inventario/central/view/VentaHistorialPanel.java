@@ -2,6 +2,7 @@ package mx.uady.inventario.central.view;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
+import java.awt.GridLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.time.LocalDate;
@@ -107,24 +108,31 @@ public final class VentaHistorialPanel extends JPanel {
         });
         actualizar.addActionListener(e -> alActualizar.run());
 
-        JPanel filtros = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        filtros.add(serie);
-        filtros.add(new JLabel("Tienda"));
-        filtros.add(tienda);
-        filtros.add(new JLabel("Producto"));
-        filtros.add(producto);
-        filtros.add(new JLabel("Desde"));
-        filtros.add(desde);
-        filtros.add(new JLabel("Hasta"));
-        filtros.add(hasta);
+        // Dos filas para que todos los filtros quepan aunque la ventana no esté maximizada.
+        JPanel catalogos = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        catalogos.add(serie);
+        catalogos.add(new JLabel("Tienda"));
+        catalogos.add(tienda);
+        catalogos.add(new JLabel("Producto"));
+        catalogos.add(producto);
+
+        JPanel fechas = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        fechas.add(new JLabel("Desde"));
+        fechas.add(desde);
+        fechas.add(new JLabel("Hasta"));
+        fechas.add(hasta);
 
         JPanel acciones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         acciones.add(actualizar);
         acciones.add(abrirQr);
 
-        JPanel barra = new JPanel(new BorderLayout());
-        barra.add(filtros, BorderLayout.CENTER);
-        barra.add(acciones, BorderLayout.EAST);
+        JPanel segundaFila = new JPanel(new BorderLayout());
+        segundaFila.add(fechas, BorderLayout.WEST);
+        segundaFila.add(acciones, BorderLayout.EAST);
+
+        JPanel barra = new JPanel(new GridLayout(2, 1, 0, 6));
+        barra.add(catalogos);
+        barra.add(segundaFila);
         add(barra, BorderLayout.NORTH);
     }
 

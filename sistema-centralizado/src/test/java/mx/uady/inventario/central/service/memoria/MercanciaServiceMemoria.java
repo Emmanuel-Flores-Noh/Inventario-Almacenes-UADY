@@ -14,7 +14,7 @@ import mx.uady.inventario.common.modelo.EstadoMercancia;
 import mx.uady.inventario.common.modelo.Mercancia;
 import mx.uady.inventario.common.modelo.Producto;
 
-/** {@link MercanciaService} sobre {@link AlmacenMemoria}; se sustituye por la versión JDBC en la Fase 6. */
+/** {@link MercanciaService} sobre {@link AlmacenMemoria}, para pruebas sin base de datos. */
 public final class MercanciaServiceMemoria implements MercanciaService {
 
     private final AlmacenMemoria almacen;

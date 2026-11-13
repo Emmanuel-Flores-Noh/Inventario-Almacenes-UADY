@@ -87,7 +87,7 @@ y `REGISTRO_ESPERA_MS` sin dejar de escuchar.
 |---|---|---|
 | MariaDB | 3306 | `DB_ROOT_PASSWORD`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` |
 | Broker | `BROKER_PORT` (5000) | `BROKER_TIMEOUT_*`, `BROKER_REINTENTOS`, `BROKER_FALLOS_PARA_INDISPONIBLE`, `BROKER_INDISPONIBLE_MS` |
-| Sistema 1 | `SERVICE_PORT` (6000) | `DB_*`, `BROKER_HOST`, `BROKER_PORT`, `SERVICE_HOST`, `SERVICE_POOL_SIZE`, `REGISTRO_*` |
+| Sistema 1 | `SERVICE_PORT` (6000) | `DB_*`, `BROKER_HOST`, `BROKER_PORT`, `SERVICE_HOST`, `SERVICE_POOL_SIZE`, `REGISTRO_*`, `QR_DIR` |
 
 `BROKER_PORT` y `SERVICE_PORT` se usan tanto para el puerto interno como para el
 mapeo al host; si los cambias en `.env`, ambos lados quedan alineados.
@@ -99,8 +99,9 @@ Windows no trae servidor X11, y una aplicacion Swing necesita uno. Hay dos camin
 ### Opcion A: desde el IDE (recomendada para desarrollo)
 
 1. Abre el proyecto en IntelliJ IDEA, Eclipse o VS Code.
-2. Configura el proyecto con **JDK 21**. Las configuraciones de `.run/*.xml`
-   apuntan al JRE 17; si las usas, cambia el JRE a 21 (el `pom.xml` compila con 21).
+2. Configura el proyecto con **JDK 21**. Las configuraciones de `.run/*.xml` del
+   broker y del cliente apuntan al JRE 17; si las usas, cambia el JRE a 21 (el
+   `pom.xml` compila con 21).
 3. Crea una configuracion de ejecucion para `mx.uady.inventario.cliente.Main`
    con estas variables de entorno, apuntando al broker publicado por Docker:
    - `BROKER_HOST=localhost`
@@ -141,7 +142,55 @@ El montaje `/tmp/.X11-unix` de `docker-compose.yml` solo se usa en WSL/Linux; en
 Windows nativo el cliente se conecta por TCP usando `DISPLAY`. Si el Firewall de
 Windows pregunta, permite la conexion del servidor X.
 
-## 6. Detener y limpiar
+## 6. Interfaz del Administrador (Sistema 1)
+
+El Sistema 1 abre su interfaz Swing (Productos, Mercancía y Ventas) solo cuando hay
+pantalla; dentro de Docker arranca únicamente como servicio. Para usarla, ejecútalo
+desde el IDE en Windows, con MariaDB levantada en Docker.
+
+1. Levanta la base de datos: `docker compose up -d mariadb`.
+   Si el puerto 3306 está ocupado por otra base local, publícala en otro puerto y
+   ajusta `DB_PORT` en el paso 2.
+2. Crea una configuración de ejecución para `mx.uady.inventario.central.Main` con
+   **JDK 21** (`.run/sistema-centralizado.run.xml` ya usa el JRE 21) y estas variables:
+
+   | Variable | Valor |
+   |---|---|
+   | `DB_HOST` | `localhost` |
+   | `DB_PORT` | `3306` (o el puerto publicado) |
+   | `DB_NAME`, `DB_USER`, `DB_PASSWORD` | los mismos de `.env` |
+   | `QR_DIR` | `storage/qr` (carpeta local; ignorada por git) |
+   | `BROKER_HOST` / `SERVICE_HOST` | `localhost` |
+
+   En VS Code puede ser un `.vscode/launch.json` (la carpeta está ignorada por git):
+
+   ```jsonc
+   {
+     "type": "java",
+     "name": "Sistema 1 (interfaz)",
+     "request": "launch",
+     "mainClass": "mx.uady.inventario.central.Main",
+     "projectName": "sistema-centralizado",
+     "envFile": "${workspaceFolder}/.env",
+     "env": { "DB_HOST": "localhost", "BROKER_HOST": "localhost",
+              "SERVICE_HOST": "localhost", "QR_DIR": "storage/qr" }
+   }
+   ```
+3. Ejecuta. El proceso también levanta el servidor TCP en `SERVICE_PORT`; si el
+   contenedor `uady-sistema-centralizado` está corriendo, detenlo antes
+   (`docker compose stop sistema-centralizado`) para liberar el puerto 6000.
+
+Notas:
+
+- La interfaz y el servidor de red comparten los mismos servicios sobre MariaDB: una
+  venta hecha por un cliente aparece en la pestaña Ventas al pulsar **Actualizar**.
+- `QR_DIR` solo aplica al IDE. En Docker el Sistema 1 usa siempre `/app/storage/qr`
+  (volumen `qr_storage`).
+- Si la base de datos no responde, cada pantalla muestra
+  *"No se pudo conectar con la base de datos"* y la ventana sigue respondiendo; pulsa
+  **Actualizar** cuando vuelva a estar disponible.
+
+## 7. Detener y limpiar
 
 ```bash
 docker compose down          # detiene los contenedores y conserva los datos

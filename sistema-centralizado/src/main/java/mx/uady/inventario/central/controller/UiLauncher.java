@@ -11,7 +11,6 @@ import javax.swing.SwingUtilities;
 import com.formdev.flatlaf.FlatLightLaf;
 
 import mx.uady.inventario.central.model.ProductoConUnidades;
-import mx.uady.inventario.central.service.VentaService;
 import mx.uady.inventario.central.view.MercanciaPanel;
 import mx.uady.inventario.central.view.Mensajes;
 import mx.uady.inventario.central.view.ProductosPanel;
@@ -34,19 +33,9 @@ public final class UiLauncher {
     }
 
     /**
-     * Abre la interfaz con los servicios en memoria.
-     *
-     * @param ventaService servicio de ventas del servidor; la interfaz usa el suyo propio en memoria
-     *                     para que todas las pestañas vean los mismos datos
-     * @return {@code true} si se abrió la interfaz, {@code false} si el entorno es headless
-     */
-    public static boolean iniciar(VentaService ventaService) {
-        return iniciar(AppContext.enMemoria());
-    }
-
-    /**
      * Abre la ventana principal en el hilo de eventos de Swing.
      *
+     * @param contexto los mismos servicios que usa el servidor de red, para trabajar sobre los mismos datos
      * @return {@code true} si se abrió la interfaz, {@code false} si el entorno es headless
      */
     public static boolean iniciar(AppContext contexto) {

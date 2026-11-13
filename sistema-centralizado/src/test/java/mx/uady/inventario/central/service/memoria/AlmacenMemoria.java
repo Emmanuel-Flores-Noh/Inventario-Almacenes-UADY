@@ -17,7 +17,7 @@ import mx.uady.inventario.common.modelo.Usuario;
 import mx.uady.inventario.common.modelo.Venta;
 
 /**
- * Datos en memoria compartidos por los servicios simulados, mientras no exista la persistencia JDBC.
+ * Datos en memoria compartidos por los servicios simulados que usan las pruebas sin base de datos.
  * Todas las operaciones se sincronizan sobre la instancia, que hace las veces de transacción.
  */
 public final class AlmacenMemoria {
