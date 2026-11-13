@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 
@@ -18,12 +19,14 @@ import org.junit.jupiter.api.Test;
 import mx.uady.inventario.common.modelo.EstadoMercancia;
 import mx.uady.inventario.common.modelo.Mercancia;
 import mx.uady.inventario.common.modelo.TiendaAlmacen;
+import mx.uady.inventario.common.modelo.Usuario;
 
 class VentaPanelTest {
 
     private static final Mercancia LAPTOP = new Mercancia(
             "SN-0001", 1, EstadoMercancia.EN_ALMACEN, null);
     private static final TiendaAlmacen TIENDA = new TiendaAlmacen(7, "Tienda Centro", "Calle 1");
+    private static final Usuario USUARIO = new Usuario(3, 3, "Lucero", "Chan", "Canul");
 
     @Test
     void muestraMercanciasYPermiteSeleccionarUnaVenta() throws Exception {
@@ -37,10 +40,11 @@ class VentaPanelTest {
             assertEquals("Laptop", tabla.getValueAt(0, VentaTableModel.COL_PRODUCTO));
 
             tabla.setRowSelectionInterval(0, 0);
-            buscar(panel, "usuarioVenta", JTextField.class).setText("3");
+            panel.mostrarUsuarios(List.of(USUARIO));
 
             assertTrue(panel.seleccionada().isPresent());
             assertEquals(7, panel.tiendaSeleccionada().orElseThrow().idTienda());
+            assertEquals(3, panel.usuarioSeleccionado().orElseThrow().idUsuario());
             assertTrue(buscar(panel, "registrarVenta", JButton.class).isEnabled());
         });
     }
@@ -57,10 +61,27 @@ class VentaPanelTest {
             buscar(panel, "tablaVentas", JTable.class).setRowSelectionInterval(0, 0);
             assertFalse(buscar(panel, "registrarVenta", JButton.class).isEnabled());
 
-            buscar(panel, "usuarioVenta", JTextField.class).setText("0");
-            assertFalse(buscar(panel, "registrarVenta", JButton.class).isEnabled());
-            buscar(panel, "usuarioVenta", JTextField.class).setText("2");
+            panel.mostrarUsuarios(List.of(USUARIO));
             assertTrue(buscar(panel, "registrarVenta", JButton.class).isEnabled());
+        });
+    }
+
+    @Test
+    void recargarCatalogosConservaLaTiendaYElUsuarioElegidos() throws Exception {
+        TiendaAlmacen otraTienda = new TiendaAlmacen(9, "Tienda Norte", "Calle 2");
+        Usuario otroUsuario = new Usuario(5, 2, "Luis", "Can", null);
+        MercanciaPanelTest.enEdt(() -> {
+            VentaPanel panel = new VentaPanel();
+            panel.mostrarTiendas(List.of(TIENDA, otraTienda));
+            panel.mostrarUsuarios(List.of(USUARIO, otroUsuario));
+            buscar(panel, "tiendaVenta", JComboBox.class).setSelectedIndex(1);
+            buscar(panel, "usuarioVenta", JComboBox.class).setSelectedIndex(1);
+
+            panel.mostrarTiendas(List.of(TIENDA, otraTienda));
+            panel.mostrarUsuarios(List.of(USUARIO, otroUsuario));
+
+            assertEquals(9, panel.tiendaSeleccionada().orElseThrow().idTienda());
+            assertEquals(5, panel.usuarioSeleccionado().orElseThrow().idUsuario());
         });
     }
 

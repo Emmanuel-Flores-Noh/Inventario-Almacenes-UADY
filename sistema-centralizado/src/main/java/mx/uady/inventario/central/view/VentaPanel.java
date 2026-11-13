@@ -28,8 +28,10 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.TableRowSorter;
 
+import mx.uady.inventario.central.service.ConsultasVentaService;
 import mx.uady.inventario.common.modelo.Mercancia;
 import mx.uady.inventario.common.modelo.TiendaAlmacen;
+import mx.uady.inventario.common.modelo.Usuario;
 
 /**
  * Pantalla visual para seleccionar una mercancía y preparar una venta.
@@ -44,7 +46,7 @@ public final class VentaPanel extends JPanel {
     private final TableRowSorter<VentaTableModel> ordenador = new TableRowSorter<>(modelo);
     private final JTextField busqueda = new JTextField(18);
     private final JComboBox<TiendaAlmacen> tienda = new JComboBox<>();
-    private final JTextField usuario = new JTextField(8);
+    private final JComboBox<Usuario> usuario = new JComboBox<>();
     private final JButton actualizar = new JButton("Actualizar");
     private final JButton vender = new JButton("Registrar venta");
     private final JLabel estado = new JLabel(" ");
@@ -78,10 +80,10 @@ public final class VentaPanel extends JPanel {
         busqueda.putClientProperty("JTextField.showClearButton", true);
         busqueda.getDocument().addDocumentListener(documento(this::aplicarBusqueda));
 
-        tienda.setRenderer(new RenderTienda());
+        tienda.setRenderer(new RenderCatalogo());
         tienda.addActionListener(e -> actualizarDisponibilidad());
-        usuario.putClientProperty("JTextField.placeholderText", "ID usuario");
-        usuario.getDocument().addDocumentListener(documento(this::actualizarDisponibilidad));
+        usuario.setRenderer(new RenderCatalogo());
+        usuario.addActionListener(e -> actualizarDisponibilidad());
         actualizar.addActionListener(e -> alActualizar.run());
         vender.addActionListener(e -> alVender.run());
 
@@ -99,7 +101,7 @@ public final class VentaPanel extends JPanel {
         c.gridx = 1;
         formulario.add(tienda, c);
         c.gridx = 2;
-        formulario.add(new JLabel("ID usuario"), c);
+        formulario.add(new JLabel("Usuario"), c);
         c.gridx = 3;
         formulario.add(usuario, c);
 
@@ -157,15 +159,7 @@ public final class VentaPanel extends JPanel {
 
     private void actualizarDisponibilidad() {
         vender.setEnabled(seleccionada().isPresent() && tienda.getSelectedItem() != null
-                && usuarioValido());
-    }
-
-    private boolean usuarioValido() {
-        try {
-            return Integer.parseInt(usuario.getText().strip()) > 0;
-        } catch (NumberFormatException e) {
-            return false;
-        }
+                && usuario.getSelectedItem() != null);
     }
 
     private static DocumentListener documento(Runnable accion) {
@@ -193,13 +187,25 @@ public final class VentaPanel extends JPanel {
     }
 
     public void mostrarTiendas(List<TiendaAlmacen> tiendas) {
-        TiendaAlmacen seleccionada = (TiendaAlmacen) this.tienda.getSelectedItem();
-        this.tienda.removeAllItems();
-        for (TiendaAlmacen tiendaAlmacen : tiendas) {
-            this.tienda.addItem(tiendaAlmacen);
+        Integer anterior = tiendaSeleccionada().map(TiendaAlmacen::idTienda).orElse(null);
+        tienda.removeAllItems();
+        tiendas.forEach(tienda::addItem);
+        for (int i = 0; anterior != null && i < tienda.getItemCount(); i++) {
+            if (tienda.getItemAt(i).idTienda() == anterior) {
+                tienda.setSelectedIndex(i);
+            }
         }
-        if (seleccionada != null) {
-            this.tienda.setSelectedItem(seleccionada);
+        actualizarDisponibilidad();
+    }
+
+    public void mostrarUsuarios(List<Usuario> usuarios) {
+        Integer anterior = usuarioSeleccionado().map(Usuario::idUsuario).orElse(null);
+        usuario.removeAllItems();
+        usuarios.forEach(usuario::addItem);
+        for (int i = 0; anterior != null && i < usuario.getItemCount(); i++) {
+            if (usuario.getItemAt(i).idUsuario() == anterior) {
+                usuario.setSelectedIndex(i);
+            }
         }
         actualizarDisponibilidad();
     }
@@ -230,8 +236,8 @@ public final class VentaPanel extends JPanel {
         return modelo.nombreProducto(idProducto);
     }
 
-    public int idUsuario() {
-        return Integer.parseInt(usuario.getText().strip());
+    public Optional<Usuario> usuarioSeleccionado() {
+        return Optional.ofNullable((Usuario) usuario.getSelectedItem());
     }
 
     public void setEstado(String texto) {
@@ -242,13 +248,16 @@ public final class VentaPanel extends JPanel {
         return new Component[] {busqueda, tienda, usuario, actualizar, vender, tabla};
     }
 
-    private static final class RenderTienda extends DefaultListCellRenderer {
+    /** Muestra tiendas y usuarios por nombre. */
+    private static final class RenderCatalogo extends DefaultListCellRenderer {
         private static final long serialVersionUID = 1L;
 
         @Override
         public Component getListCellRendererComponent(JList<?> lista, Object valor, int indice,
                 boolean seleccionado, boolean foco) {
-            Object texto = valor instanceof TiendaAlmacen t ? t.idTienda() + " - " + t.nombre() : valor;
+            Object texto = valor instanceof TiendaAlmacen t ? t.nombre()
+                    : valor instanceof Usuario u ? ConsultasVentaService.nombreCompleto(u)
+                    : valor;
             return super.getListCellRendererComponent(lista, texto, indice, seleccionado, foco);
         }
     }
