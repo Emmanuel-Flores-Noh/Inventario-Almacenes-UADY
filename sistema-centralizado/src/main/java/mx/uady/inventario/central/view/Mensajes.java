@@ -56,13 +56,26 @@ public final class Mensajes {
         if (negocio != null && negocio.getMessage() != null) {
             return negocio.getMessage();
         }
-        if (buscar(error, SQLException.class) != null || buscar(error, ConnectException.class) != null) {
+        if (esFalloDeConexion(error)) {
             return ERROR_CONEXION;
         }
-        if (buscar(error, AccesoDatosException.class) != null) {
+        if (buscar(error, SQLException.class) != null || buscar(error, AccesoDatosException.class) != null) {
             return ERROR_ALMACENAMIENTO;
         }
         return ERROR_INESPERADO;
+    }
+
+    /** La base de datos no responde: socket rechazado o SQLState de la clase 08 (conexión). */
+    private static boolean esFalloDeConexion(Throwable error) {
+        if (buscar(error, ConnectException.class) != null) {
+            return true;
+        }
+        for (Throwable actual = error; actual != null && actual.getCause() != actual; actual = actual.getCause()) {
+            if (actual instanceof SQLException sql && sql.getSQLState() != null && sql.getSQLState().startsWith("08")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Busca el primer elemento del tipo indicado en la cadena de causas. */

@@ -26,8 +26,9 @@ class MensajesTest {
     }
 
     @Test
-    void traduceErroresDeBaseDeDatosAMensajeDeConexion() {
-        assertEquals(Mensajes.ERROR_CONEXION, Mensajes.describir(new SQLException("Connection refused")));
+    void traduceFallosDeConexionAMensajeDeConexion() {
+        assertEquals(Mensajes.ERROR_CONEXION,
+                Mensajes.describir(new SQLException("Socket fail to connect", "08000")));
         assertEquals(Mensajes.ERROR_CONEXION,
                 Mensajes.describir(new RuntimeException(new ConnectException("Connection refused"))));
     }
@@ -36,8 +37,10 @@ class MensajesTest {
     void distingueFallosDeAlmacenamientoDeLosDeConexion() {
         assertEquals(Mensajes.ERROR_ALMACENAMIENTO,
                 Mensajes.describir(new AccesoDatosException("QR", new java.io.IOException("disco lleno"))));
+        assertEquals(Mensajes.ERROR_ALMACENAMIENTO,
+                Mensajes.describir(new AccesoDatosException("guardar", new SQLException("Data too long", "22001"))));
         assertEquals(Mensajes.ERROR_CONEXION,
-                Mensajes.describir(new AccesoDatosException("listar", new SQLException("Connection refused"))));
+                Mensajes.describir(new AccesoDatosException("listar", new SQLException("Connection lost", "08S01"))));
     }
 
     @Test

@@ -39,11 +39,11 @@ public final class ProductoServiceMemoria implements ProductoService {
 
     @Override
     public Producto guardar(Producto producto) {
-        ProductoValidator.exigirValido(producto);
+        Producto limpio = ProductoValidator.normalizar(producto);
         almacen.simularLatencia();
 
-        String nombre = producto.nombre().strip();
-        String descripcion = vacioANulo(producto.descripcion());
+        String nombre = limpio.nombre();
+        String descripcion = limpio.descripcion();
 
         synchronized (almacen) {
             if (producto.idProducto() == 0) {
@@ -64,9 +64,5 @@ public final class ProductoServiceMemoria implements ProductoService {
             almacen.productos.put(actualizado.idProducto(), actualizado);
             return actualizado;
         }
-    }
-
-    private static String vacioANulo(String texto) {
-        return texto == null || texto.isBlank() ? null : texto.strip();
     }
 }
