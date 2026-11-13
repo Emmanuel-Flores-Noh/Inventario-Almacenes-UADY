@@ -1,5 +1,6 @@
 package mx.uady.inventario.central.repository;
 
+import mx.uady.inventario.central.model.VentaHistorial;
 import mx.uady.inventario.central.util.ConexionBD;
 import mx.uady.inventario.central.util.ConfiguracionBD;
 import mx.uady.inventario.common.modelo.EstadoMercancia;
@@ -10,6 +11,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -29,7 +32,18 @@ public class VentaRepository {
     private static final String ACTUALIZAR_ESTADO =
             "UPDATE mercancia SET estado = ? WHERE numero_serie = ?";
 
-    private final ConnectionProvider connectionProvider;
+    private static final String LISTAR_HISTORIAL =
+            "SELECT v.id_venta, v.numero_serie, p.nombre AS producto, t.nombre AS tienda, "
+                    + "CONCAT_WS(' ', u.nombres, u.apellido_paterno, u.apellido_materno) AS usuario, "
+                    + "v.fecha_venta, m.id_producto "
+                    + "FROM ventas v "
+                    + "JOIN mercancia m ON m.numero_serie = v.numero_serie "
+                    + "JOIN productos p ON p.id_producto = m.id_producto "
+                    + "JOIN tiendas_almacenes t ON t.id_tienda = v.id_tienda "
+                    + "JOIN usuarios u ON u.id_usuario = v.id_usuario "
+                    + "ORDER BY v.fecha_venta DESC, v.id_venta DESC";
+
+    private final ProveedorConexion connectionProvider;
 
     /**
      * Crea el repositorio usando la configuración JDBC del proceso.
@@ -55,7 +69,7 @@ public class VentaRepository {
      *
      * @param connectionProvider proveedor usado para abrir conexiones
      */
-    public VentaRepository(ConnectionProvider connectionProvider) {
+    public VentaRepository(ProveedorConexion connectionProvider) {
         this.connectionProvider = Objects.requireNonNull(
                 connectionProvider,
                 "El proveedor de conexiones no puede ser nulo"
@@ -174,14 +188,20 @@ public class VentaRepository {
         }
     }
 
-    @FunctionalInterface
-    public interface ConnectionProvider {
-        /**
-         * Abre una conexión para una operación transaccional.
-         *
-         * @return conexión JDBC abierta
-         * @throws SQLException si no puede abrirse la conexión
-         */
-        Connection abrir() throws SQLException;
+    /**
+     * Historial de ventas con el producto, la tienda y el usuario de cada una,
+     * de la más reciente a la más antigua.
+     */
+    public List<VentaHistorial> listarHistorial(Connection conexion) throws SQLException {
+        try (PreparedStatement sentencia = conexion.prepareStatement(LISTAR_HISTORIAL);
+             ResultSet filas = sentencia.executeQuery()) {
+            List<VentaHistorial> ventas = new ArrayList<>();
+            while (filas.next()) {
+                ventas.add(new VentaHistorial(filas.getInt("id_venta"), filas.getString("numero_serie"),
+                        filas.getString("producto"), filas.getString("tienda"), filas.getString("usuario"),
+                        filas.getTimestamp("fecha_venta").toLocalDateTime(), filas.getInt("id_producto")));
+            }
+            return ventas;
+        }
     }
 }

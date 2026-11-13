@@ -75,6 +75,8 @@ services:
       # en la red de Docker, para que el broker lo alcance.
       SERVICE_HOST: ${SERVICE_HOST:-sistema-centralizado}
       SERVICE_POOL_SIZE: ${SERVICE_POOL_SIZE:-16}
+      # Fijo a la carpeta del volumen qr_storage; QR_DIR de .env es solo para el IDE.
+      QR_DIR: /app/storage/qr
       REGISTRO_INTENTOS: ${REGISTRO_INTENTOS:-30}
       REGISTRO_ESPERA_MS: ${REGISTRO_ESPERA_MS:-2000}
     ports:

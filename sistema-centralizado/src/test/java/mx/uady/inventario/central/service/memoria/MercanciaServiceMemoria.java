@@ -1,25 +1,20 @@
 package mx.uady.inventario.central.service.memoria;
 
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-import mx.uady.inventario.central.service.AccesoDatosException;
 import mx.uady.inventario.central.service.MercanciaService;
 import mx.uady.inventario.central.service.MercanciaValidator;
 import mx.uady.inventario.central.service.NegocioException;
-import mx.uady.inventario.central.service.QrGenerationException;
 import mx.uady.inventario.central.service.QrService;
+import mx.uady.inventario.central.service.QrUnidades;
 import mx.uady.inventario.central.service.SerieDuplicadaException;
-import mx.uady.inventario.central.service.ValidacionException;
 import mx.uady.inventario.common.modelo.EstadoMercancia;
 import mx.uady.inventario.common.modelo.Mercancia;
 import mx.uady.inventario.common.modelo.Producto;
 
-/** {@link MercanciaService} sobre {@link AlmacenMemoria}; se sustituye por la versión JDBC en la Fase 6. */
+/** {@link MercanciaService} sobre {@link AlmacenMemoria}, para pruebas sin base de datos. */
 public final class MercanciaServiceMemoria implements MercanciaService {
 
     private final AlmacenMemoria almacen;
@@ -71,7 +66,7 @@ public final class MercanciaServiceMemoria implements MercanciaService {
             if (unidad == null) {
                 throw new NegocioException("La unidad " + numeroSerie + " ya no existe; actualiza la lista.");
             }
-            if (unidad.rutaQr() != null && Files.isRegularFile(Path.of(unidad.rutaQr()))) {
+            if (QrUnidades.existe(unidad.rutaQr())) {
                 return unidad;
             }
             Producto producto = almacen.productos.get(unidad.idProducto());
@@ -85,22 +80,7 @@ public final class MercanciaServiceMemoria implements MercanciaService {
         }
     }
 
-    /**
-     * Genera el QR con el servicio del #4 y traduce sus errores a los de la capa de servicio:
-     * los de validación (sin causa) a {@link ValidacionException} y los de escritura a
-     * {@link AccesoDatosException}.
-     */
     private String generarQr(String serie, Producto producto) {
-        try {
-            return qrService.generarCodigoQR(serie, producto.idProducto(), producto.nombre());
-        } catch (QrGenerationException e) {
-            if (e.getCause() == null) {
-                throw new ValidacionException(e.getMessage() + ".");
-            }
-            throw new AccesoDatosException("No se pudo generar el QR de " + serie, e);
-        } catch (InvalidPathException e) {
-            throw new ValidacionException(
-                    "El número de serie contiene caracteres que no se pueden usar en el nombre del archivo del QR.");
-        }
+        return QrUnidades.generar(qrService, serie, producto);
     }
 }

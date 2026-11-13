@@ -12,9 +12,12 @@ import mx.uady.inventario.common.modelo.EstadoMercancia;
 import mx.uady.inventario.common.modelo.HistorialPrecio;
 import mx.uady.inventario.common.modelo.Mercancia;
 import mx.uady.inventario.common.modelo.Producto;
+import mx.uady.inventario.common.modelo.TiendaAlmacen;
+import mx.uady.inventario.common.modelo.Usuario;
+import mx.uady.inventario.common.modelo.Venta;
 
 /**
- * Datos en memoria compartidos por los servicios simulados, mientras no exista la persistencia JDBC.
+ * Datos en memoria compartidos por los servicios simulados que usan las pruebas sin base de datos.
  * Todas las operaciones se sincronizan sobre la instancia, que hace las veces de transacción.
  */
 public final class AlmacenMemoria {
@@ -23,6 +26,9 @@ public final class AlmacenMemoria {
     /** Clave en minúsculas: la PK de MariaDB ({@code utf8mb4_unicode_ci}) no distingue mayúsculas. */
     final Map<String, Mercancia> mercancia = new LinkedHashMap<>();
     final List<HistorialPrecio> historial = new ArrayList<>();
+    final List<TiendaAlmacen> tiendas = new ArrayList<>();
+    final List<Usuario> usuarios = new ArrayList<>();
+    final List<Venta> ventas = new ArrayList<>();
     final Duration latencia;
 
     private int siguienteIdProducto = 1;
@@ -50,6 +56,15 @@ public final class AlmacenMemoria {
         almacen.agregarUnidad("SN-UADY-0008", 4, EstadoMercancia.VENDIDO);
         almacen.agregarUnidad("SN-UADY-0009", 5, EstadoMercancia.EN_ALMACEN);
         almacen.agregarUnidad("SN-UADY-0010", 5, EstadoMercancia.VENDIDO);
+        almacen.tiendas.add(new TiendaAlmacen(1, "Almacen Central UADY", "Calle 60 s/n, Centro, Merida, Yucatan"));
+        almacen.tiendas.add(new TiendaAlmacen(2, "Tienda Facultad de Ingenieria",
+                "Periferico Norte, Campus de Ingenieria, Merida"));
+        almacen.tiendas.add(new TiendaAlmacen(3, "Tienda Facultad de Matematicas",
+                "Campus de Ciencias Exactas, Merida"));
+        almacen.usuarios.add(new Usuario(1, 1, "Ana", "Pineda", "Solis"));
+        almacen.usuarios.add(new Usuario(2, 2, "Carlos", "Mendez", "Ruiz"));
+        almacen.usuarios.add(new Usuario(3, 3, "Lucero", "Chan", "Canul"));
+        almacen.usuarios.add(new Usuario(4, 2, "Emmanuel", "Flores", "Noh"));
         return almacen;
     }
 

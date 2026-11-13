@@ -44,6 +44,18 @@ public final class ProductoValidator {
         return errores;
     }
 
+    /**
+     * Valida el producto y lo devuelve listo para guardar: nombre sin espacios sobrantes
+     * y descripción vacía como {@code null}.
+     */
+    public static Producto normalizar(Producto producto) {
+        exigirValido(producto);
+        String descripcion = producto.descripcion();
+        return new Producto(producto.idProducto(), producto.nombre().strip(),
+                descripcion == null || descripcion.isBlank() ? null : descripcion.strip(),
+                producto.precioActual());
+    }
+
     /** Lanza {@link ValidacionException} con el primer error encontrado. */
     public static void exigirValido(Producto producto) {
         if (producto == null) {

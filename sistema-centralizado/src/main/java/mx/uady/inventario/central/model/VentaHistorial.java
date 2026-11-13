@@ -1,4 +1,4 @@
-package mx.uady.inventario.central.view;
+package mx.uady.inventario.central.model;
 
 import java.time.LocalDateTime;
 

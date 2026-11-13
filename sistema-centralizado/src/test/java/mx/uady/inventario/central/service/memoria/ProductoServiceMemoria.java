@@ -15,7 +15,7 @@ import mx.uady.inventario.common.modelo.HistorialPrecio;
 import mx.uady.inventario.common.modelo.Mercancia;
 import mx.uady.inventario.common.modelo.Producto;
 
-/** {@link ProductoService} sobre {@link AlmacenMemoria}; se sustituye por la versión JDBC en la Fase 6. */
+/** {@link ProductoService} sobre {@link AlmacenMemoria}, para pruebas sin base de datos. */
 public final class ProductoServiceMemoria implements ProductoService {
 
     private final AlmacenMemoria almacen;
@@ -39,11 +39,11 @@ public final class ProductoServiceMemoria implements ProductoService {
 
     @Override
     public Producto guardar(Producto producto) {
-        ProductoValidator.exigirValido(producto);
+        Producto limpio = ProductoValidator.normalizar(producto);
         almacen.simularLatencia();
 
-        String nombre = producto.nombre().strip();
-        String descripcion = vacioANulo(producto.descripcion());
+        String nombre = limpio.nombre();
+        String descripcion = limpio.descripcion();
 
         synchronized (almacen) {
             if (producto.idProducto() == 0) {
@@ -64,9 +64,5 @@ public final class ProductoServiceMemoria implements ProductoService {
             almacen.productos.put(actualizado.idProducto(), actualizado);
             return actualizado;
         }
-    }
-
-    private static String vacioANulo(String texto) {
-        return texto == null || texto.isBlank() ? null : texto.strip();
     }
 }

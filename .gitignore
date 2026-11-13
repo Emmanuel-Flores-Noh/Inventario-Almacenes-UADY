@@ -41,6 +41,8 @@ Thumbs.db
 ### Logs & DB runtime ###
 *.log
 docker/mariadb/data/
+# PNG de QR generados al ejecutar la interfaz del Sistema 1 desde el IDE (QR_DIR=storage/qr)
+storage/
 
 ### Variables de entorno locales ###
 .env

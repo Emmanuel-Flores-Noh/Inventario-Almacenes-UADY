@@ -1,38 +1,54 @@
 package mx.uady.inventario.central.controller;
 
 import java.nio.file.Path;
-import java.time.Duration;
+import java.util.Map;
 import java.util.Objects;
 
+import mx.uady.inventario.central.repository.ProveedorConexion;
+import mx.uady.inventario.central.repository.VentaRepository;
+import mx.uady.inventario.central.service.ConsultasVentaService;
 import mx.uady.inventario.central.service.MercanciaService;
 import mx.uady.inventario.central.service.ProductoService;
 import mx.uady.inventario.central.service.QrService;
-import mx.uady.inventario.central.service.memoria.AlmacenMemoria;
-import mx.uady.inventario.central.service.memoria.MercanciaServiceMemoria;
-import mx.uady.inventario.central.service.memoria.ProductoServiceMemoria;
+import mx.uady.inventario.central.service.VentaService;
+import mx.uady.inventario.central.service.jdbc.ConsultasVentaJdbc;
+import mx.uady.inventario.central.service.jdbc.MercanciaServiceJdbc;
+import mx.uady.inventario.central.service.jdbc.ProductoServiceJdbc;
+import mx.uady.inventario.central.util.ConfiguracionBD;
 
 /**
- * Único lugar donde se construyen los servicios que usa la interfaz.
- * Al integrar la persistencia (#2) y el QR (#4) solo cambia la fábrica que se invoca aquí.
+ * Único lugar donde se construyen los servicios del Sistema 1.
+ * La interfaz y el servidor de red comparten el mismo contexto para trabajar sobre los mismos datos.
  */
-public record AppContext(ProductoService productoService, MercanciaService mercanciaService, QrService qrService) {
+public record AppContext(ProductoService productoService, MercanciaService mercanciaService,
+        VentaService ventaService, ConsultasVentaService consultasVenta) {
 
-    /** Latencia simulada para comprobar que la interfaz no se congela. */
-    private static final Duration LATENCIA_SIMULADA = Duration.ofMillis(400);
+    /** Variable de entorno con la carpeta donde se guardan los PNG de los QR. */
+    public static final String VAR_DIRECTORIO_QR = "QR_DIR";
+    /** Carpeta del contenedor Docker, montada en el volumen {@code qr_storage}. */
+    public static final String DIRECTORIO_QR_POR_DEFECTO = "/app/storage/qr";
 
     public AppContext {
         Objects.requireNonNull(productoService, "productoService");
         Objects.requireNonNull(mercanciaService, "mercanciaService");
-        Objects.requireNonNull(qrService, "qrService");
+        Objects.requireNonNull(ventaService, "ventaService");
+        Objects.requireNonNull(consultasVenta, "consultasVenta");
     }
 
-    /**
-     * Servicios en memoria con los datos de ejemplo de {@code 02_seed.sql}.
-     * Usa el {@link QrService} real (#4) escribiendo en una carpeta temporal local.
-     */
-    public static AppContext enMemoria() {
-        AlmacenMemoria almacen = AlmacenMemoria.conDatosDeEjemplo(LATENCIA_SIMULADA);
-        QrService qr = new QrService(Path.of(System.getProperty("java.io.tmpdir"), "inventario-uady", "qr"));
-        return new AppContext(new ProductoServiceMemoria(almacen), new MercanciaServiceMemoria(almacen, qr), qr);
+    /** Servicios sobre MariaDB con la configuración indicada. */
+    public static AppContext jdbc(ConfiguracionBD configuracion, Path directorioQr) {
+        ProveedorConexion conexiones = ProveedorConexion.de(Objects.requireNonNull(configuracion, "configuracion"));
+        QrService qr = new QrService(Objects.requireNonNull(directorioQr, "directorioQr"));
+        return new AppContext(
+                new ProductoServiceJdbc(conexiones),
+                new MercanciaServiceJdbc(conexiones, qr),
+                new VentaService(new VentaRepository(conexiones)::registrarVenta),
+                new ConsultasVentaJdbc(conexiones));
+    }
+
+    /** Carpeta de los QR según {@code QR_DIR}, o {@value #DIRECTORIO_QR_POR_DEFECTO} si no está definida. */
+    public static Path directorioQr(Map<String, String> entorno) {
+        String valor = entorno.get(VAR_DIRECTORIO_QR);
+        return Path.of(valor == null || valor.isBlank() ? DIRECTORIO_QR_POR_DEFECTO : valor.strip());
     }
 }
