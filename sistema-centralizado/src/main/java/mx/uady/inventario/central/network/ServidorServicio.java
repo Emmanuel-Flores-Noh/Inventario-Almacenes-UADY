@@ -138,10 +138,20 @@ public class ServidorServicio {
         return puerto;
     }
 
+    /**
+     * Indica si el servidor acepta conexiones.
+     *
+     * @return {@code true} mientras el servidor está activo
+     */
     public boolean isActivo() {
         return activo;
     }
 
+    /**
+     * Devuelve el número máximo de conexiones atendidas en paralelo.
+     *
+     * @return tamaño fijo del pool de trabajadores
+     */
     public int getTamanoPool() {
         return tamanoPool;
     }

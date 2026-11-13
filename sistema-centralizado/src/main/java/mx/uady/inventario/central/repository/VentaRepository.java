@@ -176,6 +176,12 @@ public class VentaRepository {
 
     @FunctionalInterface
     public interface ConnectionProvider {
+        /**
+         * Abre una conexión para una operación transaccional.
+         *
+         * @return conexión JDBC abierta
+         * @throws SQLException si no puede abrirse la conexión
+         */
         Connection abrir() throws SQLException;
     }
 }

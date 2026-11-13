@@ -44,6 +44,9 @@ public record ConfiguracionServicio(
     private static final String INTENTOS_REGISTRO_POR_DEFECTO = "30";
     private static final String ESPERA_REINTENTO_POR_DEFECTO = "2000";
 
+    /**
+     * Valida los parámetros de red y reintentos del servicio.
+     */
     public ConfiguracionServicio {
         hostServicio = requerirTexto(hostServicio, "host del servicio");
         hostBroker = requerirTexto(hostBroker, "host del broker");

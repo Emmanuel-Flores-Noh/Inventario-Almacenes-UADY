@@ -29,6 +29,9 @@ public record ConfiguracionBD(String host, int puerto, String nombre, String usu
     private static final String PUERTO_POR_DEFECTO = "3306";
     private static final String NOMBRE_POR_DEFECTO = "almacenes_uady";
 
+    /**
+     * Valida y normaliza los parámetros de conexión.
+     */
     public ConfiguracionBD {
         host = requerirTexto(host, "host");
         nombre = requerirTexto(nombre, "nombre de la base de datos");
