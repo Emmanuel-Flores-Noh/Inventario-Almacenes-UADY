@@ -9,6 +9,11 @@ import mx.uady.inventario.common.servicio.Operaciones;
 import mx.uady.inventario.common.servicio.Servicios;
 import mx.uady.inventario.central.service.VentaService;
 
+import mx.uady.inventario.central.service.ConsultasVentaService;
+import mx.uady.inventario.central.service.MercanciaService;
+import mx.uady.inventario.common.modelo.EstadoMercancia;
+import mx.uady.inventario.common.json.GsonFactory;
+
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -74,6 +79,72 @@ public class DespachadorSolicitudes {
                     ventaService::registrarVenta
             );
         }
+        return despachador;
+    }
+
+
+    /**
+     * Crea el despachador estándar conectando la operación de venta.
+     *
+     * @param ventaService servicio de venta; si es nulo, la operación queda pendiente
+     * @param consultasVentaService servicio de consulta de ventas; si es nulo, la operación queda pendiente
+     * @param mercanciaService servicio de mercancia; si es nulo, la operación queda pendiente
+     * @return despachador con el catálogo estándar
+     */
+    public static DespachadorSolicitudes estandar(
+            VentaService ventaService,
+            ConsultasVentaService consultasVentaService,
+            MercanciaService mercanciaService) {
+        
+        DespachadorSolicitudes despachador = new DespachadorSolicitudes();
+        
+        despachador.registrarServicio(Servicios.GESTOR_TIENDAS,
+                Operaciones.LISTAR_TIENDAS, Operaciones.ACTUALIZAR_TIENDA_VENTA, "listarUsuarios");
+        despachador.registrarServicio(Servicios.INVENTARIO,
+                Operaciones.LISTAR_INVENTARIO);
+        despachador.registrarServicio(Servicios.GESTOR_PRECIOS,
+                Operaciones.LISTAR_PRECIOS_PRODUCTO);
+        
+        if (ventaService != null) {
+            despachador.registrarOperacion(
+                    Servicios.GESTOR_TIENDAS,
+                    Operaciones.ACTUALIZAR_TIENDA_VENTA,
+                    ventaService::registrarVenta
+            );
+        }
+
+        if (consultasVentaService != null) {
+            despachador.registrarOperacion(
+                    Servicios.GESTOR_TIENDAS,
+                    Operaciones.LISTAR_TIENDAS,
+                    params -> GsonFactory.DEFAULT.toJsonTree(consultasVentaService.listarTiendas())
+            );
+
+            despachador.registrarOperacion(
+                    Servicios.GESTOR_TIENDAS,
+                    Operaciones.LISTAR_USUARIOS,
+                    params -> {
+                        final int ID_ROL_PROVEEDOR = 2; 
+
+                        var proveedores = consultasVentaService.listarUsuarios().stream()
+                                .filter(u -> u.idRol() == ID_ROL_PROVEEDOR)
+                                .toList();
+                        return GsonFactory.DEFAULT.toJsonTree(proveedores);
+                    }
+            );
+        }
+
+        if (mercanciaService != null) {
+            despachador.registrarOperacion(
+                    Servicios.INVENTARIO,
+                    Operaciones.LISTAR_INVENTARIO,
+                    params -> {
+                        var disponibles = mercanciaService.listar(null, EstadoMercancia.EN_ALMACEN);
+                        return GsonFactory.DEFAULT.toJsonTree(disponibles);
+                    }
+            );
+        }
+
         return despachador;
     }
 
@@ -157,7 +228,7 @@ public class DespachadorSolicitudes {
             return Respuesta.error(idSolicitud, CodigoError.OPERACION_NO_SOPORTADA,
                     "Operacion no soportada: " + nombreOperacion + " para el servicio " + nombreServicio);
         }
-
+ 
         ManejadorOperacion manejador = delServicio.get(nombreOperacion);
         if (manejador == PENDIENTE) {
             return Respuesta.error(idSolicitud, CodigoError.OPERACION_NO_SOPORTADA,

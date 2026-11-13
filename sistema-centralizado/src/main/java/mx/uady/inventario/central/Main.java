@@ -44,7 +44,11 @@ public class Main {
 
         // La interfaz y el servidor de red comparten los mismos servicios sobre MariaDB.
         AppContext contexto = AppContext.jdbc(configuracionBD, AppContext.directorioQr(System.getenv()));
-        DespachadorSolicitudes despachador = DespachadorSolicitudes.estandar(contexto.ventaService());
+        DespachadorSolicitudes despachador = DespachadorSolicitudes.estandar(
+                contexto.ventaService(),
+                contexto.consultasVenta(),
+                contexto.mercanciaService()
+        );
         ServidorServicio servidor = new ServidorServicio(
                 configuracion.puertoServicio(), configuracion.tamanoPool(), despachador);
 

@@ -33,6 +33,8 @@ public final class Operaciones {
     public static final String REMOVER_PROVEEDOR = "removerProveedor";
     /** Actualizar un proveedor en el broker */
     public static final String ACTUALIZAR_PROVEEDOR = "actualizarProveedor";
+    /** Listar los usuarios / proveedores */
+    public static final String LISTAR_USUARIOS = "listarUsuarios";
 
     // Ocultar el constructor publico
     private Operaciones() {}
