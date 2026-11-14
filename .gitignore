@@ -1,3 +1,15 @@
+### docs generator ###
+.venv/
+bin/node_modules/
+bin/package-lock.json
+bin/pnpm-lock.yaml
+__pycache__/
+*.py[cod]
+
+# Conservar la salida de docs
+!docs/**/out/
+
+### Proyecto ###
 target/
 # Generado por maven-shade-plugin al empaquetar
 dependency-reduced-pom.xml

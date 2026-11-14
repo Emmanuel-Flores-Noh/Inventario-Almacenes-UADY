@@ -1,0 +1,34 @@
+## Prueba 1: Registro correcto de proveedores
+
+*Pruebas requeridas por la actividad*
+
+**Evidencia:** `01_registro_proveedores.txt`
+
+**Resultado:** Al arrancar, el Sistema 1 registra sus 3 servicios (`gestorTiendas`, `inventario`, `gestorPrecios`) en el Broker; la bitácora muestra cada `[REGISTRO] registrar … -> sistema-centralizado:6000`
+
+```text
+# Prueba 1: Registro correcto de proveedores
+Fecha (hora local del equipo): 2026-11-14 09:18:12
+Codigo: rama dev/chris, commit bb03b8c
+
+Al arrancar, el Sistema 1 (proveedor) se registra dinamicamente en el Broker enviando la operacion
+broker.registrarProveedor por socket, una vez por cada servicio que ofrece. El Broker asocia cada
+nombre de servicio con el host y puerto del proveedor.
+
+## Consola del Sistema 1 (docker logs uady-sistema-centralizado)
+  Escuchando en el puerto 6000 con pool de 16 hilos
+  Servicios: gestorTiendas, inventario, gestorPrecios
+Proveedor registrado en el broker broker:5000 como sistema-centralizado:6000 (gestorTiendas, inventario, gestorPrecios)
+
+## Bitacora del Broker (docker logs uady-broker)
+Broker iniciado en el puerto 5000 con pool de 16 hilos (timeout conexion 2000 ms, timeout lectura 5000 ms, reintentos 2, fallos para no disponible 3, enfriamiento 30000 ms)
+[REGISTRO] 2026-11-14 15:18:04.923 [pool-1-thread-2] registrar gestorTiendas -> sistema-centralizado:6000
+[BROKER] 2026-11-14 15:18:04.927 [pool-1-thread-2] id=4a9115a3-12a4-487c-94d3-fcd6bbb9ea57 broker.registrarProveedor -> broker | EXITO | 64 ms
+[REGISTRO] 2026-11-14 15:18:04.946 [pool-1-thread-3] registrar inventario -> sistema-centralizado:6000
+[BROKER] 2026-11-14 15:18:04.946 [pool-1-thread-3] id=98ab0ce6-4ee9-4fa0-aaad-4e0876f6904f broker.registrarProveedor -> broker | EXITO | 0 ms
+[REGISTRO] 2026-11-14 15:18:04.948 [pool-1-thread-4] registrar gestorPrecios -> sistema-centralizado:6000
+[BROKER] 2026-11-14 15:18:04.948 [pool-1-thread-4] id=59e22cf3-e34b-422e-95fa-d811eec592d5 broker.registrarProveedor -> broker | EXITO | 0 ms
+
+Resumen: los 3 servicios (gestorTiendas, inventario, gestorPrecios) quedan registrados hacia
+sistema-centralizado:6000. Prueba automatizada relacionada: RegistroServiciosTest (registrarYBuscar).
+```

@@ -1,0 +1,39 @@
+sequenceDiagram
+    autonumber
+    participant C as Cliente
+    participant B as Broker
+    participant S as Proveedor (Sistema 1)
+    participant DB as MariaDB
+
+    Note over C,DB: Intercambio de mensajes JSON sobre Sockets TCP
+
+    C->>B: Solicitud JSON<br/>{nombreServicio: "gestorPrecios",<br/>nombreOperacion: "listarPreciosProducto",<br/>parametros: {id_producto}}
+
+    B->>B: Deserializa la solicitud (unmarshalling)
+    B->>B: Busca el proveedor de "gestorPrecios"
+
+    alt Servicio sin proveedor o no disponible
+        B->>C: Respuesta JSON {estado: "ERROR", codigoError: "E001" o "E004"}
+    else Proveedor disponible
+        B->>S: Reenvía la solicitud JSON a host:puerto
+        S->>S: Valida que id_producto sea un entero positivo
+
+        alt id_producto inválido
+            S->>B: Respuesta JSON {estado: "ERROR", codigoError: "E003"}
+        else id_producto válido
+            S->>DB: SELECT de productos
+            DB->>S: Productos
+            alt El producto no existe
+                S->>B: Respuesta JSON {estado: "ERROR", codigoError: "E003",<br/>mensajeError: "El producto no existe"}
+            else El producto existe
+                S->>DB: SELECT de historial_precio WHERE id_producto = ?<br/>ORDER BY fecha_cambio
+                DB->>S: Historial de precios
+                S->>S: Serializa el resultado (marshalling)
+                S->>B: Respuesta JSON<br/>{estado: "EXITO", resultado: {idProducto, nombre,<br/>precioActual, historial: [...]}}
+            end
+        end
+        B->>B: Anota la solicitud en la bitácora [BROKER]
+        B->>C: Reenvía la respuesta (mismo idSolicitud)
+    end
+
+    C->>C: Deserializa y presenta el historial de precios

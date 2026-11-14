@@ -1,0 +1,30 @@
+# Prueba 5: Servicio desconocido
+Fecha (hora local del equipo): 2026-11-14 09:18:16
+Codigo: rama dev/chris, commit bb03b8c
+
+El cliente pide un servicio que ningun proveedor registro. El Broker lo rechaza sin contactar a
+ningun proveedor y sin caerse.
+
+## servicioFantasma.listar
+
+CLIENTE -> BROKER (localhost:5000)
+{
+  "idSolicitud": "ev-05",
+  "nombreServicio": "servicioFantasma",
+  "nombreOperacion": "listar",
+  "parametros": {},
+  "fechaHora": "2026-11-14T09:18:16.6061441"
+}
+BROKER -> CLIENTE (14 ms)
+{
+  "idSolicitud": "ev-05",
+  "estado": "ERROR",
+  "codigoError": "SERVICIO_DESCONOCIDO",
+  "mensajeError": "Servicio desconocido: servicioFantasma",
+  "fechaHora": "2026-11-14T15:18:16.638050827"
+}
+Resumen: estado=ERROR, codigo=SERVICIO_DESCONOCIDO, mensaje="Servicio desconocido: servicioFantasma"
+
+Bitacora del Broker (docker logs uady-broker):
+[BROKER] 2026-11-14 15:18:16.638 [pool-1-thread-12] id=ev-05 servicioFantasma.listar -> (sin proveedor) | ERROR SERVICIO_DESCONOCIDO: Servicio desconocido: servicioFantasma | 0 ms
+

@@ -1,0 +1,51 @@
+sequenceDiagram
+    autonumber
+    participant C as Cliente (Sistema 2)
+    participant B as Broker
+    participant S as Proveedor (Sistema 1)
+    participant DB as MariaDB
+
+    Note over C,DB: Intercambio de mensajes JSON sobre Sockets TCP
+
+    C->>B: Solicitud JSON<br/>{nombreServicio: "inventario",<br/>nombreOperacion: "obtenerQr",<br/>parametros: {numero_serie}}
+
+    B->>B: Deserializa la solicitud (unmarshalling)
+    B->>B: Busca el proveedor de "inventario"
+
+    alt Servicio sin proveedor o no disponible
+        B->>C: Respuesta JSON {estado: "ERROR", codigoError: "E001" o "E004"}
+    else Proveedor disponible
+        B->>S: Reenvía la solicitud JSON a host:puerto
+        S->>S: Valida que numero_serie no esté vacío
+
+        alt Falta numero_serie
+            S->>B: Respuesta JSON {estado: "ERROR", codigoError: "E003"}
+        else numero_serie presente
+            S->>DB: BEGIN
+            S->>DB: SELECT de mercancia WHERE numero_serie = ? FOR UPDATE
+            DB->>S: Unidad (o ninguna)
+
+            alt La unidad no existe
+                S->>DB: ROLLBACK
+                S->>B: Respuesta JSON {estado: "ERROR", codigoError: "E003",<br/>mensajeError: "La unidad ya no existe"}
+            else La unidad existe
+                opt La unidad aún no tiene PNG del QR
+                    S->>DB: SELECT del producto de la unidad
+                    S->>S: Genera el PNG con ZXing en el almacenamiento de QR
+                    S->>DB: UPDATE mercancia SET ruta_qr = ?
+                end
+                S->>DB: COMMIT
+                S->>S: Lee el PNG y lo codifica en Base64
+                S->>DB: SELECT de productos (nombre del producto)
+                S->>B: Respuesta JSON<br/>{estado: "EXITO", resultado: {numeroSerie, idProducto,<br/>nombreProducto, pngBase64}}
+            end
+        end
+        B->>B: Anota la solicitud en la bitácora [BROKER]
+        B->>C: Reenvía la respuesta (mismo idSolicitud)
+    end
+
+    alt Respuesta exitosa
+        C->>C: Decodifica el Base64 y muestra la vista previa del QR
+    else Respuesta de error
+        C->>C: Traduce el código de error y ofrece reintentar
+    end
