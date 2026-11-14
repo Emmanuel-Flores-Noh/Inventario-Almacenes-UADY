@@ -21,6 +21,8 @@
 
 ## 1. Introducción
 
+[El codigo del proyecto se puede encontrar en este repositorio.](https://github.com/Emmanuel-Flores-Noh/Inventario-Almacenes-UADY/)
+
 El proyecto integra dos sistemas que gestionan el inventario de los almacenes de la UADY:
 
 - **Sistema 1 (centralizado / proveedor):** registra los productos y cada unidad física (mercancía), genera
