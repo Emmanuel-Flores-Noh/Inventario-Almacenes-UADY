@@ -1,15 +1,95 @@
 package mx.uady.inventario.central;
 
+import java.nio.file.Path;
+
+import mx.uady.inventario.central.controller.AppContext;
+import mx.uady.inventario.central.controller.UiLauncher;
+import mx.uady.inventario.central.network.DespachadorSolicitudes;
+import mx.uady.inventario.central.network.RegistradorBroker;
+import mx.uady.inventario.central.network.ServidorServicio;
+import mx.uady.inventario.central.service.QrService;
+import mx.uady.inventario.central.util.ConfiguracionBD;
+import mx.uady.inventario.central.util.ConfiguracionServicio;
+
 /**
- * Punto de entrada principal para el Sistema 1 (Sistema Centralizado / Proveedor).
- * Responsable del almacenamiento en MariaDB, generación de códigos QR (ZXing)
- * y exposición de servicios a través del Broker vía Sockets TCP.
+ * Punto de entrada del Sistema 1 (Centralizado / Proveedor).
+ *
+ * <p>Arranca el servidor TCP en {@code SERVICE_PORT} y registra sus tres servicios
+ * en el broker sin bloquear el arranque: si el broker aun no esta listo, el hilo
+ * de registro reintenta mientras el servidor ya atiende conexiones.</p>
  */
 public class Main {
+
+    /**
+     * Arranca el servidor TCP, registra el proveedor en el Broker y mantiene
+     * vivo el proceso hasta recibir una interrupción.
+     *
+     * @param args argumentos de línea de comandos; no se utilizan
+     */
     public static void main(String[] args) {
+        ConfiguracionServicio configuracion;
+        try {
+            configuracion = ConfiguracionServicio.desdeEntorno();
+        } catch (RuntimeException e) {
+            System.err.println("Configuracion invalida del Sistema 1: " + e.getMessage());
+            System.exit(1);
+            return;
+        }
+
+        ConfiguracionBD configuracionBD;
+        try {
+            configuracionBD = ConfiguracionBD.desdeEntorno();
+        } catch (RuntimeException e) {
+            System.err.println("Configuracion invalida de MariaDB: " + e.getMessage());
+            System.exit(1);
+            return;
+        }
+
+        // La interfaz y el servidor de red comparten los mismos servicios sobre MariaDB.
+        Path directorioQr = AppContext.directorioQr(System.getenv());
+        AppContext contexto = AppContext.jdbc(configuracionBD, directorioQr);
+        DespachadorSolicitudes despachador = DespachadorSolicitudes.estandar(
+                contexto.ventaService(),
+                contexto.consultasVenta(),
+                contexto.mercanciaService(),
+                contexto.productoService(),
+                new QrService(directorioQr)
+        );
+        ServidorServicio servidor = new ServidorServicio(
+                configuracion.puertoServicio(), configuracion.tamanoPool(), despachador);
+
+        try {
+            servidor.iniciar();
+        } catch (IllegalStateException e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+            return;
+        }
+
+        RegistradorBroker registrador = new RegistradorBroker(
+                configuracion, RegistradorBroker.serviciosDelSistema());
+        Thread hiloRegistro = registrador.iniciarEnSegundoPlano();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            hiloRegistro.interrupt();
+            servidor.detener();
+        }, "servicio-shutdown"));
+
         System.out.println("==================================================");
-        System.out.println("  Iniciando Sistema Centralizado / Proveedor");
-        System.out.println("  Sistema de Trazabilidad e Inventarios UADY");
+        System.out.println("  Sistema Centralizado / Proveedor iniciado");
+        System.out.println("  Escuchando en el puerto " + servidor.getPuerto()
+                + " con pool de " + configuracion.tamanoPool() + " hilos");
+        System.out.println("  Broker: " + configuracion.hostBroker() + ":" + configuracion.puertoBroker());
+        System.out.println("  Servicios: " + String.join(", ", RegistradorBroker.serviciosDelSistema()));
         System.out.println("==================================================");
+
+        UiLauncher.iniciar(contexto);
+        try {
+            Thread.currentThread().join();
+        } catch (InterruptedException e) {
+            hiloRegistro.interrupt();
+            servidor.detener();
+            Thread.currentThread().interrupt();
+        }
     }
 }

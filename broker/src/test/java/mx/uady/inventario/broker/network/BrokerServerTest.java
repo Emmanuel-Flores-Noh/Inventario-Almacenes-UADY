@@ -1,6 +1,8 @@
 package mx.uady.inventario.broker.network;
 
 import mx.uady.inventario.broker.registry.RegistroServicios;
+import mx.uady.inventario.broker.model.Proveedor;
+import mx.uady.inventario.broker.util.ConfiguracionBroker;
 import mx.uady.inventario.common.contrato.Respuesta;
 import mx.uady.inventario.common.contrato.Solicitud;
 import mx.uady.inventario.common.json.GsonFactory;
@@ -88,6 +90,98 @@ class BrokerServerTest {
             provider.close();
             hilo.join();
         }
+    }
+
+    @Test
+    void usaLaConfiguracionDeResilienciaRecibida() throws Exception {
+        ConfiguracionBroker configuracion = new ConfiguracionBroker(0, 2, 300, 400, 1, 5, 1, 60_000);
+        BrokerServer broker = new BrokerServer(configuracion);
+        assertEquals(configuracion, broker.getConfiguracion());
+        broker.iniciar();
+        int puerto = broker.getPuerto();
+
+        try (Socket socket = new Socket("localhost", puerto);
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+
+            // Con fallosParaIndisponible=1 basta un fallo para marcar al proveedor.
+            broker.getRegistro().registrar(new Proveedor(Servicios.INVENTARIO, "localhost", 1));
+            broker.getRegistro().marcarFallo(Servicios.INVENTARIO);
+
+            Solicitud solicitud = Solicitud.crear("req-sin-disponible", Servicios.INVENTARIO, "listarInventario",
+                    new com.google.gson.JsonObject());
+            out.println(GsonFactory.DEFAULT.toJson(solicitud));
+            Respuesta respuesta = GsonFactory.DEFAULT.fromJson(in.readLine(), Respuesta.class);
+
+            assertEquals(mx.uady.inventario.common.error.CodigoError.PROVEEDOR_NO_REGISTRADO,
+                    respuesta.getCodigoError());
+            assertEquals("req-sin-disponible", respuesta.getIdSolicitud());
+        } finally {
+            broker.detener();
+        }
+    }
+
+    /**
+     * La bitacora del broker anota el registro de un proveedor, cada solicitud atendida
+     * (con su proveedor y resultado) y las solicitudes a servicios desconocidos.
+     */
+    @Test
+    void laBitacoraAnotaRegistroSolicitudesYErrores() throws Exception {
+        java.net.ServerSocket provider = new java.net.ServerSocket(0);
+        int providerPort = provider.getLocalPort();
+        Thread hilo = new Thread(() -> {
+            try (java.net.Socket s = provider.accept()) {
+                BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
+                PrintWriter out = new PrintWriter(s.getOutputStream(), true);
+                Solicitud sol = GsonFactory.DEFAULT.fromJson(in.readLine(), Solicitud.class);
+                out.println(GsonFactory.DEFAULT.toJson(
+                        Respuesta.exito(sol.getIdSolicitud(), new com.google.gson.JsonPrimitive("OK"))));
+            } catch (Exception ignored) {
+            }
+        });
+        hilo.start();
+
+        java.util.List<String> lineas = new java.util.concurrent.CopyOnWriteArrayList<>();
+        BrokerServer broker = new BrokerServer(new ConfiguracionBroker(0, 4, 2000, 2000, 0, 0, 3, 30_000),
+                new mx.uady.inventario.broker.util.BitacoraBroker(lineas::add));
+        broker.iniciar();
+
+        try (Socket socket = new Socket("localhost", broker.getPuerto());
+             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
+             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()))) {
+            Solicitud registro = Solicitud.crear("reg-1", Servicios.BROKER,
+                    mx.uady.inventario.common.servicio.Operaciones.REGISTRAR_PROVEEDOR,
+                    new com.google.gson.JsonObject());
+            registro.getParametros().addProperty("servicio", Servicios.INVENTARIO);
+            registro.getParametros().addProperty("host", "localhost");
+            registro.getParametros().addProperty("puerto", providerPort);
+            out.println(GsonFactory.DEFAULT.toJson(registro));
+            in.readLine();
+
+            out.println(GsonFactory.DEFAULT.toJson(Solicitud.crear("req-ok", Servicios.INVENTARIO,
+                    "listarInventario", new com.google.gson.JsonObject())));
+            in.readLine();
+
+            out.println(GsonFactory.DEFAULT.toJson(Solicitud.crear("req-x", "servicioFantasma",
+                    "listar", new com.google.gson.JsonObject())));
+            in.readLine();
+        } finally {
+            broker.detener();
+            provider.close();
+            hilo.join();
+        }
+
+        String destino = "localhost:" + providerPort;
+        assertTrue(lineas.stream().anyMatch(l -> l.startsWith("[REGISTRO]")
+                && l.endsWith("registrar inventario -> " + destino)), String.join("\n", lineas));
+        assertTrue(lineas.stream().anyMatch(l -> l.startsWith("[BROKER]")
+                && l.contains("id=reg-1 broker.registrarProveedor -> broker | EXITO")), String.join("\n", lineas));
+        assertTrue(lineas.stream().anyMatch(l -> l.contains("id=req-ok inventario.listarInventario -> "
+                + destino + " | EXITO | ")), String.join("\n", lineas));
+        assertTrue(lineas.stream().anyMatch(l -> l.contains("id=req-x servicioFantasma.listar -> (sin proveedor) "
+                + "| ERROR SERVICIO_DESCONOCIDO")), String.join("\n", lineas));
+        assertTrue(lineas.stream().filter(l -> l.startsWith("[BROKER]")).allMatch(l -> l.contains("[pool-")),
+                "Cada solicitud debe indicar el hilo del pool que la atendió");
     }
 
     @Test

@@ -17,6 +17,8 @@ public final class Operaciones {
      */
     /** Listar el inventario de productos */
     public static final String LISTAR_INVENTARIO = "listarInventario";
+    /** Obtener la imagen PNG (en Base64) del código QR de una unidad */
+    public static final String OBTENER_QR = "obtenerQr";
 
     /**
      * Operaciones servicio gestorPrecios
@@ -33,6 +35,8 @@ public final class Operaciones {
     public static final String REMOVER_PROVEEDOR = "removerProveedor";
     /** Actualizar un proveedor en el broker */
     public static final String ACTUALIZAR_PROVEEDOR = "actualizarProveedor";
+    /** Listar los usuarios / proveedores */
+    public static final String LISTAR_USUARIOS = "listarUsuarios";
 
     // Ocultar el constructor publico
     private Operaciones() {}

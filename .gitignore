@@ -9,8 +9,10 @@ __pycache__/
 # Conservar la salida de docs
 !docs/**/out/
 
-### Proyecto broker ###
+### Proyecto ###
 target/
+# Generado por maven-shade-plugin al empaquetar
+dependency-reduced-pom.xml
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/.gitkeep
 !**/src/test/**/.gitkeep
@@ -51,4 +53,10 @@ Thumbs.db
 ### Logs & DB runtime ###
 *.log
 docker/mariadb/data/
->>>>>>> 5dd629d (Arquitectura y configuracion inicial)
+# PNG de QR generados al ejecutar la interfaz del Sistema 1 desde el IDE (QR_DIR=storage/qr)
+storage/
+
+### Variables de entorno locales ###
+.env
+.env.*
+!.env.example

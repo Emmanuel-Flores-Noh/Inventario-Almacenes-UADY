@@ -7,6 +7,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ModelosGsonTest {
 
@@ -19,9 +21,20 @@ class ModelosGsonTest {
 
     @Test
     void roundTripMercancia() {
-        Mercancia original = new Mercancia("SN-001", 1, "EN_ALMACEN", "/qr/SN-001.png");
-        Mercancia copia = GsonFactory.DEFAULT.fromJson(GsonFactory.DEFAULT.toJson(original), Mercancia.class);
-        assertEquals(original, copia);
+        Mercancia original = new Mercancia("SN-001", 1, EstadoMercancia.EN_ALMACEN, "/qr/SN-001.png");
+        String json = GsonFactory.DEFAULT.toJson(original);
+
+        // El contrato viaja con el nombre del enum, igual que hacia antes con el String.
+        assertTrue(json.contains("\"estado\":\"EN_ALMACEN\""), json);
+        assertEquals(original, GsonFactory.DEFAULT.fromJson(json, Mercancia.class));
+    }
+
+    @Test
+    void convierteEstadoDesdeCadena() {
+        assertEquals(EstadoMercancia.EN_ALMACEN, EstadoMercancia.desdeCadena("en_almacen"));
+        assertEquals(EstadoMercancia.VENDIDO, EstadoMercancia.desdeCadena(" VENDIDO "));
+        assertThrows(IllegalArgumentException.class, () -> EstadoMercancia.desdeCadena("PERDIDO"));
+        assertThrows(IllegalArgumentException.class, () -> EstadoMercancia.desdeCadena(" "));
     }
 
     @Test

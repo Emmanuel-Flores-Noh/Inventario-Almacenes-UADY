@@ -23,6 +23,12 @@
     </properties>
 
     <dependencies>
+        <!-- Estilo y tema FlatLaf para componentes Swing reutilizables -->
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+        </dependency>
+
         <!-- Persistencia con MariaDB JDBC -->
         <dependency>
             <groupId>org.mariadb.jdbc</groupId>
@@ -49,6 +55,15 @@
         <dependency>
             <groupId>mx.uady.inventario</groupId>
             <artifactId>common</artifactId>
+        </dependency>
+
+        <!-- Broker solo para pruebas de integracion de la Fase 5: la prueba de
+             carga arranca un BrokerServer real frente al ServidorServicio. -->
+        <dependency>
+            <groupId>mx.uady.inventario</groupId>
+            <artifactId>broker</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
         </dependency>
 
         <!-- Testing -->
