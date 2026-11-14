@@ -1,0 +1,52 @@
+sequenceDiagram
+    autonumber
+    participant C as Cliente (Sistema 2)
+    participant B as Broker
+    participant S as Proveedor (Sistema 1)
+    participant DB as MariaDB
+
+    Note over C,DB: Intercambio de mensajes JSON sobre Sockets TCP
+
+    C->>B: Solicitud JSON<br/>{nombreServicio: "gestorTiendas",<br/>nombreOperacion: "actualizarTiendaVenta",<br/>parametros: {numero_serie, id_tienda, id_usuario}}
+
+    B->>B: Deserializa la solicitud (unmarshalling)
+    B->>B: Busca el proveedor de "gestorTiendas"
+
+    alt Servicio sin proveedor o no disponible
+        B->>C: Respuesta JSON {estado: "ERROR", codigoError: "E001" o "E004"}
+    else Proveedor no responde tras los reintentos
+        B-xS: Reenvía la solicitud (sin respuesta)
+        B->>B: Registra el fallo del proveedor
+        B->>C: Respuesta JSON {estado: "ERROR", codigoError: "E005"}
+    else Proveedor disponible
+        B->>S: Reenvía la solicitud JSON a host:puerto
+        S->>S: Valida numero_serie (texto) e id_tienda, id_usuario (enteros positivos)
+
+        alt Parámetros con formato inválido
+            S->>B: Respuesta JSON {estado: "ERROR", codigoError: "E003"}
+        else Parámetros correctos
+            S->>DB: BEGIN (autocommit desactivado)
+            S->>DB: SELECT estado FROM mercancia<br/>WHERE numero_serie = ? FOR UPDATE
+            S->>DB: Verifica que existan la tienda y el usuario
+
+            alt Unidad inexistente, ya vendida, o tienda/usuario inexistente
+                S->>DB: ROLLBACK
+                S->>B: Respuesta JSON {estado: "ERROR", codigoError: "E003",<br/>mensajeError: "La mercancía ya fue vendida", ...}
+            else Datos válidos
+                S->>DB: INSERT INTO ventas (numero_serie, id_tienda, id_usuario, fecha_venta)
+                S->>DB: UPDATE mercancia SET estado = "VENDIDO"
+                S->>DB: COMMIT
+                S->>DB: Consulta la fecha_venta registrada
+                DB->>S: fecha_venta
+                S->>B: Respuesta JSON<br/>{estado: "EXITO", resultado: {numero_serie, id_tienda, fecha_venta}}
+            end
+        end
+        B->>B: Anota la solicitud en la bitácora [BROKER]
+        B->>C: Reenvía la respuesta (mismo idSolicitud)
+    end
+
+    alt Respuesta exitosa
+        C->>C: Muestra la confirmación, limpia el formulario<br/>y recarga las listas
+    else Respuesta de error
+        C->>C: Traduce el código de error y ofrece reintentar
+    end

@@ -1,18 +1,27 @@
 sequenceDiagram
     autonumber
-    participant S as Servicio
+    participant S as Proveedor (Sistema 1)
     participant B as Broker
 
     Note over S,B: Intercambio de mensajes JSON sobre Sockets TCP
 
-    S->>B: Solicitud JSON de registro<br/>{servicio: "broker",<br/>operación: "registrarProveedor",<br/>parámetros: {nombre del servicio, host, puerto}}
+    S->>S: Inicia el servidor TCP en SERVICE_PORT
 
-    B->>B: Deserializa la solicitud (unmarshalling)
-    B->>B: Valida la operación y los parámetros
+    loop Por cada servicio (gestorTiendas, inventario, gestorPrecios)
+        S->>B: Solicitud JSON de registro<br/>{nombreServicio: "broker",<br/>nombreOperacion: "registrarProveedor",<br/>parametros: {servicio, host, puerto}}
 
-    alt Parámetros válidos
-        B->>B: Almacena el servicio en el registro<br/>(nombre del servicio → host:puerto)
-        B->>S: Respuesta JSON<br/>{estado: "éxito", resultado: "Servicio registrado"}
-    else Parámetros inválidos
-        B->>S: Respuesta JSON<br/>{estado: "error", mensaje: "Parámetros inválidos"}
+        alt Broker no disponible
+            S->>S: Espera REGISTRO_ESPERA_MS y reintenta<br/>(hasta REGISTRO_INTENTOS)
+        else Broker disponible
+            B->>B: Deserializa la solicitud (unmarshalling)
+            B->>B: Valida que parametros sea un objeto JSON
+
+            alt Parámetros válidos
+                B->>B: Almacena el proveedor en el registro<br/>(servicio → host:puerto) y limpia su salud
+                B->>B: Anota el cambio en la bitácora [REGISTRO]
+                B->>S: Respuesta JSON<br/>{estado: "EXITO", resultado: "Proveedor registrado"}
+            else Parámetros inválidos
+                B->>S: Respuesta JSON<br/>{estado: "ERROR", codigoError: "E003",<br/>mensajeError: "Parametros invalidos para registro"}
+            end
+        end
     end

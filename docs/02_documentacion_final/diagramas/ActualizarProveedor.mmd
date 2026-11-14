@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    participant S as Proveedor (Sistema 1)
+    participant B as Broker
+
+    Note over S,B: Intercambio de mensajes JSON sobre Sockets TCP
+
+    S->>B: Solicitud JSON<br/>{nombreServicio: "broker",<br/>nombreOperacion: "actualizarProveedor",<br/>parametros: {servicio, host, puerto}}
+
+    B->>B: Deserializa la solicitud (unmarshalling)
+    B->>B: Valida que parametros sea un objeto JSON
+
+    alt Parámetros válidos
+        B->>B: Sustituye el proveedor del servicio<br/>(solo si ya estaba registrado)
+        alt El servicio estaba registrado
+            B->>B: Actualiza host:puerto y reactiva al proveedor
+        else El servicio no estaba registrado
+            B->>B: No modifica el registro
+        end
+        B->>B: Anota el cambio en la bitácora [REGISTRO]<br/>(indica si se aplicó)
+        B->>S: Respuesta JSON<br/>{estado: "EXITO", resultado: "Proveedor modificado"}
+    else Parámetros inválidos
+        B->>S: Respuesta JSON<br/>{estado: "ERROR", codigoError: "E003",<br/>mensajeError: "Parametros invalidos para registro"}
+    end

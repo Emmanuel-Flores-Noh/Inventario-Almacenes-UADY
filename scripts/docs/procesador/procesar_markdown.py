@@ -501,7 +501,9 @@ def procesar_documento(archivos_md, nombre_proyecto, subcarpeta, docs_dir, out_d
                 border: 1px solid #e2e8f0; /* slate-200 */
                 padding: 12pt;
                 border-radius: 6px;
-                overflow-x: auto;
+                /* En PDF no hay scroll: las líneas largas se envuelven en lugar de cortarse */
+                white-space: pre-wrap;
+                overflow-wrap: anywhere;
                 font-family: "Courier New", Courier, monospace;
                 font-size: 9.5pt;
                 line-height: 1.5;

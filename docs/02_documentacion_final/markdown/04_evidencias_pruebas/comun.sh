@@ -4,9 +4,9 @@
 # y el proyecto compilado (mvn package) para usar el jar del cliente como classpath.
 
 EV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Raíz del checkout con el código (rama qa o dev/chris). Por defecto, tres niveles arriba de esta
-# carpeta (docs/02_documentacion_final/evidencias); se puede indicar otra con REPO=/ruta/al/repo.
-REPO="${REPO:-$(cd "$EV/../../.." && pwd)}"
+# Raíz del checkout con el código (rama qa o dev/chris). Por defecto, cuatro niveles arriba de esta
+# carpeta (docs/02_documentacion_final/markdown/04_evidencias_pruebas); se puede indicar otra con REPO=/ruta/al/repo.
+REPO="${REPO:-$(cd "$EV/../../../.." && pwd)}"
 CP="$REPO/sistema-cliente/target/sistema-cliente.jar"
 JAVA="java -Dstdout.encoding=UTF-8 -Dfile.encoding=UTF-8"
 
