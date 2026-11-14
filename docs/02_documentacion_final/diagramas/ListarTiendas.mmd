@@ -1,0 +1,30 @@
+sequenceDiagram
+    autonumber
+    participant C as Cliente (Sistema 2)
+    participant B as Broker
+    participant S as Proveedor (Sistema 1)
+    participant DB as MariaDB
+
+    Note over C,DB: Intercambio de mensajes JSON sobre Sockets TCP
+
+    C->>B: Solicitud JSON<br/>{nombreServicio: "gestorTiendas",<br/>nombreOperacion: "listarTiendas",<br/>parametros: {}}
+
+    B->>B: Deserializa la solicitud (unmarshalling)
+    B->>B: Busca el proveedor de "gestorTiendas"
+
+    alt Servicio sin proveedor registrado
+        B->>C: Respuesta JSON {estado: "ERROR", codigoError: "E001"}
+    else Proveedor marcado como no disponible
+        B->>C: Respuesta JSON {estado: "ERROR", codigoError: "E004"}
+    else Proveedor disponible
+        B->>S: Reenvía la solicitud JSON a host:puerto
+        S->>S: Deserializa y despacha la operación
+        S->>DB: SELECT id_tienda, nombre, direccion<br/>FROM tiendas_almacenes ORDER BY nombre
+        DB->>S: Filas de tiendas
+        S->>S: Serializa la lista (marshalling)
+        S->>B: Respuesta JSON<br/>{estado: "EXITO", resultado: [{idTienda, nombre, direccion}, ...]}
+        B->>B: Anota la solicitud en la bitácora [BROKER]
+        B->>C: Reenvía la respuesta (mismo idSolicitud)
+    end
+
+    C->>C: Deserializa la lista y llena el combo de tiendas

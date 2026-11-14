@@ -1,0 +1,32 @@
+sequenceDiagram
+    autonumber
+    participant C as Cliente (Sistema 2)
+    participant B as Broker
+    participant S as Proveedor (Sistema 1)
+    participant DB as MariaDB
+
+    Note over C,DB: Intercambio de mensajes JSON sobre Sockets TCP
+
+    C->>B: Solicitud JSON<br/>{nombreServicio: "inventario",<br/>nombreOperacion: "listarInventario",<br/>parametros: {}}
+
+    B->>B: Deserializa la solicitud (unmarshalling)
+    B->>B: Busca el proveedor de "inventario"
+
+    alt Servicio sin proveedor registrado
+        B->>C: Respuesta JSON {estado: "ERROR", codigoError: "E001"}
+    else Proveedor marcado como no disponible
+        B->>C: Respuesta JSON {estado: "ERROR", codigoError: "E004"}
+    else Proveedor disponible
+        B->>S: Reenvía la solicitud JSON a host:puerto
+        S->>S: Deserializa y despacha la operación
+        S->>DB: SELECT de mercancia WHERE estado = "EN_ALMACEN"
+        DB->>S: Unidades en almacén
+        S->>DB: SELECT de productos (para resolver nombres)
+        DB->>S: Productos
+        S->>S: Arma cada fila sin la ruta interna del QR<br/>y serializa la lista (marshalling)
+        S->>B: Respuesta JSON<br/>{estado: "EXITO", resultado: [{numeroSerie, idProducto,<br/>nombreProducto, estado}, ...]}
+        B->>B: Anota la solicitud en la bitácora [BROKER]
+        B->>C: Reenvía la respuesta (mismo idSolicitud)
+    end
+
+    C->>C: Deserializa la lista y llena la tabla de mercancía

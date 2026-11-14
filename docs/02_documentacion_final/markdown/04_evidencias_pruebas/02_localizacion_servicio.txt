@@ -1,0 +1,66 @@
+# Prueba 2: Localizacion de un servicio
+Fecha (hora local del equipo): 2026-11-14 09:18:12
+Codigo: rama dev/chris, commit bb03b8c
+
+El cliente solo conoce la direccion del Broker (localhost:5000). El Broker busca en su registro el
+proveedor del servicio 'inventario' y le reenvia la solicitud. La bitacora muestra el proveedor localizado.
+
+## inventario.listarInventario
+
+CLIENTE -> BROKER (localhost:5000)
+{
+  "idSolicitud": "ev-02",
+  "nombreServicio": "inventario",
+  "nombreOperacion": "listarInventario",
+  "parametros": {},
+  "fechaHora": "2026-11-14T09:18:13.3713633"
+}
+BROKER -> CLIENTE (105 ms)
+{
+  "idSolicitud": "ev-02",
+  "resultado": [
+    {
+      "numeroSerie": "SN-UADY-0001",
+      "idProducto": 1,
+      "nombreProducto": "Laptop Lenovo ThinkPad E14",
+      "estado": "EN_ALMACEN"
+    },
+    {
+      "numeroSerie": "SN-UADY-0003",
+      "idProducto": 2,
+      "nombreProducto": "Proyector Epson PowerLite",
+      "estado": "EN_ALMACEN"
+    },
+    {
+      "numeroSerie": "SN-UADY-0005",
+      "idProducto": 3,
+      "nombreProducto": "Silla ergonomica",
+      "estado": "EN_ALMACEN"
+    },
+    {
+      "numeroSerie": "SN-UADY-0006",
+      "idProducto": 3,
+      "nombreProducto": "Silla ergonomica",
+      "estado": "EN_ALMACEN"
+    },
+    {
+      "numeroSerie": "SN-UADY-0007",
+      "idProducto": 4,
+      "nombreProducto": "Impresora laser HP",
+      "estado": "EN_ALMACEN"
+    },
+    {
+      "numeroSerie": "SN-UADY-0009",
+      "idProducto": 5,
+      "nombreProducto": "Tablet Samsung Galaxy Tab",
+      "estado": "EN_ALMACEN"
+    }
+  ],
+  "estado": "EXITO",
+  "fechaHora": "2026-11-14T15:18:13.49528742"
+}
+Resumen: estado=EXITO
+
+Bitacora del Broker (docker logs uady-broker):
+[BROKER] 2026-11-14 15:18:13.496 [pool-1-thread-6] id=ev-02 inventario.listarInventario -> sistema-centralizado:6000 | EXITO | 90 ms
+

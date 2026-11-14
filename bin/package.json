@@ -1,0 +1,10 @@
+{
+  "name": "docs-mermaid-local",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mermaid CLI local para procesar los diagramas del proyecto",
+  "dependencies": {
+    "@mermaid-js/mermaid-cli": "11.17.1",
+    "puppeteer": "^25.0.0"
+  }
+}

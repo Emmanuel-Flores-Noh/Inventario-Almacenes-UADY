@@ -1,0 +1,20 @@
+sequenceDiagram
+    autonumber
+    participant S as Proveedor (Sistema 1)
+    participant B as Broker
+
+    Note over S,B: Intercambio de mensajes JSON sobre Sockets TCP
+
+    S->>B: Solicitud JSON<br/>{nombreServicio: "broker",<br/>nombreOperacion: "removerProveedor",<br/>parametros: {servicio}}
+
+    B->>B: Deserializa la solicitud (unmarshalling)
+    B->>B: Valida que parametros sea un objeto JSON
+
+    alt Parámetros válidos
+        B->>B: Elimina el servicio del registro<br/>y su historial de salud
+        B->>B: Anota el cambio en la bitácora [REGISTRO]<br/>(indica si existía)
+        B->>S: Respuesta JSON<br/>{estado: "EXITO", resultado: "Proveedor eliminado"}
+        Note over B: Las solicitudes posteriores a ese servicio<br/>reciben E001 Servicio desconocido
+    else Parámetros inválidos
+        B->>S: Respuesta JSON<br/>{estado: "ERROR", codigoError: "E003",<br/>mensajeError: "Parametros invalidos para registro"}
+    end

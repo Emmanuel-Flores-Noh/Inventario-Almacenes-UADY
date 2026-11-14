@@ -1,0 +1,68 @@
+# Evidencia adicional: solicitud duplicada (pregunta 9)
+Fecha (hora local del equipo): 2026-11-14 09:18:18
+Codigo: rama dev/chris, commit bb03b8c
+
+La misma venta se envia dos veces. La primera se registra; la segunda se rechaza porque la unidad ya
+esta VENDIDO. En la base de datos queda una sola venta: la transaccion con bloqueo pesimista
+(SELECT ... FOR UPDATE) evita que una solicitud repetida registre la venta dos veces.
+
+## Primer envio
+
+CLIENTE -> BROKER (localhost:5000)
+{
+  "idSolicitud": "ev-13a",
+  "nombreServicio": "gestorTiendas",
+  "nombreOperacion": "actualizarTiendaVenta",
+  "parametros": {
+    "numero_serie": "SN-UADY-0005",
+    "id_tienda": 2,
+    "id_usuario": 4
+  },
+  "fechaHora": "2026-11-14T09:18:18.9463501"
+}
+BROKER -> CLIENTE (26 ms)
+{
+  "idSolicitud": "ev-13a",
+  "resultado": {
+    "numero_serie": "SN-UADY-0005",
+    "id_tienda": 2,
+    "fecha_venta": "2026-11-14T15:18:18"
+  },
+  "estado": "EXITO",
+  "fechaHora": "2026-11-14T15:18:18.996737669"
+}
+Resumen: estado=EXITO
+
+Bitacora del Broker (docker logs uady-broker):
+[BROKER] 2026-11-14 15:18:18.997 [pool-1-thread-16] id=ev-13a gestorTiendas.actualizarTiendaVenta -> sistema-centralizado:6000 | EXITO | 10 ms
+
+## Segundo envio (misma venta, id de solicitud distinto)
+
+CLIENTE -> BROKER (localhost:5000)
+{
+  "idSolicitud": "ev-13b",
+  "nombreServicio": "gestorTiendas",
+  "nombreOperacion": "actualizarTiendaVenta",
+  "parametros": {
+    "numero_serie": "SN-UADY-0005",
+    "id_tienda": 2,
+    "id_usuario": 4
+  },
+  "fechaHora": "2026-11-14T09:18:19.5111541"
+}
+BROKER -> CLIENTE (20 ms)
+{
+  "idSolicitud": "ev-13b",
+  "estado": "ERROR",
+  "codigoError": "PARAMETROS_INVALIDOS",
+  "mensajeError": "La mercancía ya fue vendida",
+  "fechaHora": "2026-11-14T15:18:19.549968198"
+}
+Resumen: estado=ERROR, codigo=PARAMETROS_INVALIDOS, mensaje="La mercancía ya fue vendida"
+
+Bitacora del Broker (docker logs uady-broker):
+[BROKER] 2026-11-14 15:18:19.550 [pool-1-thread-1] id=ev-13b gestorTiendas.actualizarTiendaVenta -> sistema-centralizado:6000 | ERROR PARAMETROS_INVALIDOS: La mercancía ya fue vendida | 6 ms
+
+Ventas registradas para SN-UADY-0005 en la base de datos:
+ventas
+1

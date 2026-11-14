@@ -1,0 +1,204 @@
+package mx.uady.inventario.broker.network;
+
+import mx.uady.inventario.broker.registry.RegistroServicios;
+import mx.uady.inventario.broker.routing.Enrutador;
+import mx.uady.inventario.broker.util.BitacoraBroker;
+import mx.uady.inventario.broker.util.ConfiguracionBroker;
+
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * Servidor TCP del broker con atencion concurrente mediante pool de hilos.
+ */
+public class BrokerServer {
+
+    private final int puerto;
+    private final int tamanoPool;
+    private final int timeoutMillis;
+    private final ConfiguracionBroker configuracion;
+    private final RegistroServicios registro;
+    private final Enrutador enrutador;
+    private final BitacoraBroker bitacora;
+    private final ExecutorService pool;
+
+    // Volatile para que sea visible a otros threads
+    private volatile boolean activo;
+    private ServerSocket serverSocket;
+    private Thread hiloAceptor;
+
+
+    /**
+     * Constructor para crear un broker
+     * @param puerto El puerto en el que se abrira el servicio
+     * @param tamanoPool La cantidad de peticiones que va admitir a la vez
+     */
+    public BrokerServer(int puerto, int tamanoPool) {
+        this(puerto, tamanoPool, 5000);
+    }
+
+    /**
+     * Constructor para crear un broker
+     * @param puerto El puerto en el que se abrira el servicio
+     * @param tamanoPool La cantidad de peticiones que va admitir a la vez (cantidad de threads)
+     * @param timeoutMillis EL tiempo en milisegundos que sobrepasados hara timeout
+     */
+    public BrokerServer(int puerto, int tamanoPool, int timeoutMillis) {
+        this(configuracionCompatible(puerto, tamanoPool, timeoutMillis));
+    }
+
+    /**
+     * Constructor con la configuracion de resiliencia del broker.
+     * El timeout de lectura se usa tambien como timeout del socket del cliente.
+     * La bitacora de solicitudes se escribe en la consola.
+     * @param configuracion puerto, pool, timeouts, reintentos y umbral de no disponible
+     */
+    public BrokerServer(ConfiguracionBroker configuracion) {
+        this(configuracion, BitacoraBroker.consola());
+    }
+
+    /**
+     * Constructor con la configuracion de resiliencia y la bitacora de solicitudes.
+     * @param configuracion puerto, pool, timeouts, reintentos y umbral de no disponible
+     * @param bitacora bitacora donde se anotan las solicitudes y los cambios del registro
+     * @throws NullPointerException si la configuracion o la bitacora son nulas
+     */
+    public BrokerServer(ConfiguracionBroker configuracion, BitacoraBroker bitacora) {
+        this.configuracion = java.util.Objects.requireNonNull(configuracion, "La configuracion es obligatoria");
+        this.bitacora = java.util.Objects.requireNonNull(bitacora, "La bitacora es obligatoria");
+        this.puerto = configuracion.puerto();
+        this.tamanoPool = configuracion.tamanoPool();
+        this.timeoutMillis = configuracion.timeoutLecturaMillis();
+        this.registro = new RegistroServicios(configuracion);
+        this.enrutador = new Enrutador(configuracion, bitacora);
+        this.pool = Executors.newFixedThreadPool(tamanoPool);
+    }
+
+    /**
+     * Traduce los constructores anteriores (un solo timeout) a la configuracion
+     * nueva. Se conservan sin reintentos para no cambiar el comportamiento previo.
+     */
+    private static ConfiguracionBroker configuracionCompatible(int puerto, int tamanoPool, int timeoutMillis) {
+        ConfiguracionBroker base = ConfiguracionBroker.porDefecto();
+        return new ConfiguracionBroker(
+                puerto,
+                tamanoPool,
+                timeoutMillis,
+                timeoutMillis,
+                0,
+                0,
+                base.fallosParaIndisponible(),
+                base.tiempoIndisponibleMillis());
+    }
+
+    /**
+     * Inicia el broker
+     * Inicializa el server socket y crea un hilo para aceptar las peticiones
+     */
+    public void iniciar() {
+        if ( activo ) {
+            return;
+        }
+
+        try {
+            serverSocket = new ServerSocket(puerto);
+        } catch (IOException e) {
+            throw new IllegalStateException("No se pudo abrir el ServerSocket en el puerto " + puerto, e);
+        }
+
+        activo = true;
+
+        hiloAceptor = new Thread(this::aceptarConexiones, "broker-acceptor");
+        hiloAceptor.setDaemon(false);
+        hiloAceptor.start();
+    }
+
+    /**
+     * Metodo que maneja las peticiones
+     * Las ingresa a una pool de peticiones.
+     */
+    private void aceptarConexiones() {
+        while (activo) {
+            try {
+                Socket cliente = serverSocket.accept();
+                // Sube las peticiones a la pool. Si un threads esta disponible manejara esa peticion
+                pool.submit(new ManejadorConexion(cliente, registro, enrutador, timeoutMillis, bitacora));
+            } catch (IOException e) {
+                if (!activo) {
+                    break;
+                }
+            }
+        }
+    }
+
+    /**
+     * Detiene el broker de manera segura
+     * Cierra el server socket y finaliza las transacciones
+     */
+    public void detener() {
+        activo = false;
+        try {
+            if (serverSocket != null && !serverSocket.isClosed()) {
+                serverSocket.close();
+            }
+        } catch (IOException ignored) {
+        }
+        pool.shutdown();
+
+        /*
+        // Le da 5 segundo a los threads para que terminen sus operaciones.
+        // Si no han terminado despues de 5 segundos el broker fuerza su apagado
+         */
+        try {
+            if (!pool.awaitTermination(5, TimeUnit.SECONDS)) {
+                pool.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            pool.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    public RegistroServicios getRegistro() {
+        return registro;
+    }
+
+    public Enrutador getEnrutador() {
+        return enrutador;
+    }
+
+    public ConfiguracionBroker getConfiguracion() {
+        return configuracion;
+    }
+
+    /**
+     * Bitacora donde el broker anota las solicitudes atendidas y los cambios del registro.
+     * @return la bitacora del broker
+     */
+    public BitacoraBroker getBitacora() {
+        return bitacora;
+    }
+
+    public int getPuerto() {
+        if (serverSocket != null && serverSocket.isBound() && !serverSocket.isClosed()) {
+            return serverSocket.getLocalPort();
+        }
+        return puerto;
+    }
+
+    public boolean isActivo() {
+        return activo;
+    }
+
+    public RegistroServicios getRegistry() {
+        return getRegistro();
+    }
+
+    public Enrutador getRouter() {
+        return getEnrutador();
+    }
+}

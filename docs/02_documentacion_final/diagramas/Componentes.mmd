@@ -1,0 +1,23 @@
+C4Component
+title Component Diagram (General) - Sistema de Inventario UADY (Patrón Broker)
+
+Container_Boundary(s2, "Sistema 2 (Cliente)") {
+    Component(cliente, "Cliente", "Java", "Construye y envía solicitudes JSON")
+}
+
+Container_Boundary(broker, "Broker (Intermediario)") {
+    Component(brokerComp, "Broker", "Java", "Registra servicios y enruta solicitudes")
+}
+
+Container_Boundary(s1, "Sistema 1 (Proveedor Centralizado)") {
+    Component(proveedor, "Proveedor", "Java", "Procesa operaciones y genera QR")
+}
+
+ContainerDb(db, "MariaDB", "Base de datos", "Persistencia")
+
+BiRel(cliente, brokerComp, "JSON", "TCP")
+UpdateRelStyle(cliente, brokerComp, $offsetY="-20")
+BiRel(brokerComp, proveedor, "JSON", "TCP")
+Rel(proveedor, db, "JDBC")
+UpdateRelStyle(proveedor, db, $offsetX="0", $offsetY="-60")
+

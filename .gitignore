@@ -1,4 +1,18 @@
+### docs generator ###
+.venv/
+bin/node_modules/
+bin/package-lock.json
+bin/pnpm-lock.yaml
+__pycache__/
+*.py[cod]
+
+# Conservar la salida de docs
+!docs/**/out/
+
+### Proyecto ###
 target/
+# Generado por maven-shade-plugin al empaquetar
+dependency-reduced-pom.xml
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/.gitkeep
 !**/src/test/**/.gitkeep
@@ -39,3 +53,10 @@ Thumbs.db
 ### Logs & DB runtime ###
 *.log
 docker/mariadb/data/
+# PNG de QR generados al ejecutar la interfaz del Sistema 1 desde el IDE (QR_DIR=storage/qr)
+storage/
+
+### Variables de entorno locales ###
+.env
+.env.*
+!.env.example
