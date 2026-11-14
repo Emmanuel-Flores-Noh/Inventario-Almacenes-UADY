@@ -275,4 +275,36 @@ class EnrutadorTest {
                 registro);
         assertEquals(mx.uady.inventario.common.error.CodigoError.PROVEEDOR_NO_REGISTRADO, tercera.getCodigoError());
     }
+
+    /**
+     * La bitacora anota cada intento fallido hacia el proveedor y, al alcanzar el umbral,
+     * que el servicio quedo marcado como no disponible (una sola vez).
+     */
+    @Test
+    void laBitacoraAnotaLosIntentosFallidosYLaMarcaDeNoDisponible() throws Exception {
+        ServerSocket temporal = new ServerSocket(0);
+        int port = temporal.getLocalPort();
+        temporal.close();
+
+        java.util.List<String> lineas = new java.util.ArrayList<>();
+        RegistroServicios registro = new RegistroServicios(1, 60_000);
+        registro.registrar(new Proveedor(Servicios.INVENTARIO, "localhost", port));
+        // reintentos = 1 -> 2 intentos en total
+        Enrutador enrutador = new Enrutador(500, 500, 1, 0,
+                new mx.uady.inventario.broker.util.BitacoraBroker(lineas::add));
+
+        enrutador.enrutar(Solicitud.crear("req-b1", Servicios.INVENTARIO, "listarInventario",
+                new com.google.gson.JsonObject()), registro);
+        enrutador.enrutar(Solicitud.crear("req-b2", Servicios.INVENTARIO, "listarInventario",
+                new com.google.gson.JsonObject()), registro);
+
+        String todas = String.join("\n", lineas);
+        assertEquals(3, lineas.size(), todas);
+        assertTrue(lineas.get(0).contains("id=req-b1 inventario.listarInventario -> localhost:" + port
+                + " | intento 1/2 fallo: ERROR_INTERNO"), todas);
+        assertTrue(lineas.get(1).contains("| intento 2/2 fallo: ERROR_INTERNO"), todas);
+        assertTrue(lineas.get(2).startsWith("[REGISTRO]")
+                && lineas.get(2).endsWith("inventario marcado como NO DISPONIBLE tras 1 fallos"), todas);
+        // La segunda solicitud ya no contacta al proveedor: no agrega intentos.
+    }
 }

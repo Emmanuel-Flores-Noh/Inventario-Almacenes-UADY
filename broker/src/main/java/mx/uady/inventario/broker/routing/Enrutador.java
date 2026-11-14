@@ -2,6 +2,7 @@ package mx.uady.inventario.broker.routing;
 
 import mx.uady.inventario.broker.model.Proveedor;
 import mx.uady.inventario.broker.registry.RegistroServicios;
+import mx.uady.inventario.broker.util.BitacoraBroker;
 import mx.uady.inventario.broker.util.ConfiguracionBroker;
 import mx.uady.inventario.common.contrato.Respuesta;
 import mx.uady.inventario.common.contrato.Solicitud;
@@ -29,12 +30,16 @@ import java.util.Optional;
  *
  * <p>Una respuesta de error valida del proveedor no es un fallo de red: no se
  * reintenta y ademas cuenta como comunicacion exitosa.</p>
+ *
+ * <p>Cada intento fallido y cada proveedor que queda marcado como no disponible
+ * se registran en la {@link BitacoraBroker}.</p>
  */
 public class Enrutador {
     private final int timeoutConexionMillis;
     private final int timeoutLecturaMillis;
     private final int reintentos;
     private final long esperaReintentoMillis;
+    private final BitacoraBroker bitacora;
 
     /**
      * Constructor compatible con el comportamiento anterior: el mismo timeout
@@ -47,26 +52,59 @@ public class Enrutador {
     }
 
     /**
-     * Constructor con la configuracion de resiliencia del broker.
+     * Constructor con la configuracion de resiliencia del broker. Los eventos se
+     * escriben en la bitacora de consola.
      *
      * @param configuracion timeouts, reintentos y espera entre intentos
      */
     public Enrutador(ConfiguracionBroker configuracion) {
-        this(configuracion.timeoutConexionMillis(),
-                configuracion.timeoutLecturaMillis(),
-                configuracion.reintentos(),
-                configuracion.esperaReintentoMillis());
+        this(configuracion, BitacoraBroker.consola());
     }
 
     /**
-     * Constructor con todos los parametros de red.
+     * Constructor con la configuracion de resiliencia y la bitacora donde se
+     * registran los intentos fallidos y los proveedores marcados como no disponibles.
+     *
+     * @param configuracion timeouts, reintentos y espera entre intentos
+     * @param bitacora      bitacora de eventos del broker
+     * @throws NullPointerException si la bitacora es nula
+     */
+    public Enrutador(ConfiguracionBroker configuracion, BitacoraBroker bitacora) {
+        this(configuracion.timeoutConexionMillis(),
+                configuracion.timeoutLecturaMillis(),
+                configuracion.reintentos(),
+                configuracion.esperaReintentoMillis(),
+                bitacora);
+    }
+
+    /**
+     * Constructor con todos los parametros de red. Los eventos se escriben en la
+     * bitacora de consola.
      *
      * @param timeoutConexionMillis timeout de conexion al proveedor
      * @param timeoutLecturaMillis timeout de lectura de la respuesta
      * @param reintentos reintentos adicionales tras el primer intento
      * @param esperaReintentoMillis espera entre intentos
+     * @throws IllegalArgumentException si algun valor esta fuera de rango
      */
     public Enrutador(int timeoutConexionMillis, int timeoutLecturaMillis, int reintentos, long esperaReintentoMillis) {
+        this(timeoutConexionMillis, timeoutLecturaMillis, reintentos, esperaReintentoMillis,
+                BitacoraBroker.consola());
+    }
+
+    /**
+     * Constructor con todos los parametros de red y la bitacora de eventos.
+     *
+     * @param timeoutConexionMillis timeout de conexion al proveedor
+     * @param timeoutLecturaMillis timeout de lectura de la respuesta
+     * @param reintentos reintentos adicionales tras el primer intento
+     * @param esperaReintentoMillis espera entre intentos
+     * @param bitacora bitacora donde se registran los intentos fallidos
+     * @throws IllegalArgumentException si algun valor esta fuera de rango
+     * @throws NullPointerException si la bitacora es nula
+     */
+    public Enrutador(int timeoutConexionMillis, int timeoutLecturaMillis, int reintentos, long esperaReintentoMillis,
+                     BitacoraBroker bitacora) {
         if (timeoutConexionMillis <= 0) {
             throw new IllegalArgumentException("timeoutConexionMillis debe ser positivo");
         }
@@ -83,6 +121,7 @@ public class Enrutador {
         this.timeoutLecturaMillis = timeoutLecturaMillis;
         this.reintentos = reintentos;
         this.esperaReintentoMillis = esperaReintentoMillis;
+        this.bitacora = Objects.requireNonNull(bitacora, "La bitacora es obligatoria");
     }
 
     /**
@@ -139,13 +178,20 @@ public class Enrutador {
                 ultimoCodigo = CodigoError.ERROR_INTERNO;
                 ultimoMensaje = "Error de comunicacion con el proveedor: " + e.getMessage();
             }
+            bitacora.registrarIntentoFallido(solicitud, proveedor, intento, intentosTotales,
+                    ultimoCodigo, ultimoMensaje);
 
             if (intento < intentosTotales && !esperarAntesDelSiguienteIntento()) {
                 break;
             }
         }
 
-        registro.marcarFallo(solicitud.getNombreServicio());
+        String servicio = solicitud.getNombreServicio();
+        boolean disponibleAntes = registro.estaDisponible(servicio);
+        registro.marcarFallo(servicio);
+        if (disponibleAntes && !registro.estaDisponible(servicio)) {
+            bitacora.registrarNoDisponible(servicio, registro.fallos(servicio));
+        }
         return Respuesta.error(solicitud.getIdSolicitud(), ultimoCodigo, ultimoMensaje);
     }
 
