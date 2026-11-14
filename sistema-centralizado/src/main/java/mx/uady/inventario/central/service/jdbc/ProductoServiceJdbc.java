@@ -10,6 +10,7 @@ import mx.uady.inventario.central.repository.ProveedorConexion;
 import mx.uady.inventario.central.service.NegocioException;
 import mx.uady.inventario.central.service.ProductoService;
 import mx.uady.inventario.central.service.ProductoValidator;
+import mx.uady.inventario.common.modelo.HistorialPrecio;
 import mx.uady.inventario.common.modelo.Producto;
 
 /** {@link ProductoService} sobre MariaDB. */
@@ -56,5 +57,17 @@ public final class ProductoServiceJdbc implements ProductoService {
             }
             return limpio;
         });
+    }
+
+    /**
+     * Consulta en MariaDB el historial de precios de un producto.
+     *
+     * @param idProducto identificador del producto
+     * @return precios anteriores del más antiguo al más reciente
+     * @throws mx.uady.inventario.central.service.AccesoDatosException si falla la base de datos
+     */
+    @Override
+    public List<HistorialPrecio> listarHistorialPrecios(int idProducto) {
+        return transacciones.leer("consultar el historial de precios", c -> historial.listar(c, idProducto));
     }
 }

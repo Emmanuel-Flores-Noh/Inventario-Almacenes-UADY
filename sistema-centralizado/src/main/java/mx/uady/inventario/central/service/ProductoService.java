@@ -3,6 +3,7 @@ package mx.uady.inventario.central.service;
 import java.util.List;
 
 import mx.uady.inventario.central.model.ProductoConUnidades;
+import mx.uady.inventario.common.modelo.HistorialPrecio;
 import mx.uady.inventario.common.modelo.Producto;
 
 /**
@@ -24,4 +25,18 @@ public interface ProductoService {
      * @return el producto tal como quedó guardado (con su id asignado si es nuevo)
      */
     Producto guardar(Producto producto);
+
+    /**
+     * Historial de precios anteriores de un producto, del cambio más antiguo al más reciente.
+     *
+     * <p>La implementación por defecto no está soportada; la versión sobre MariaDB la sobrescribe.</p>
+     *
+     * @param idProducto identificador del producto
+     * @return precios anteriores; lista vacía si nunca cambió de precio
+     * @throws UnsupportedOperationException si la implementación no ofrece esta consulta
+     * @throws AccesoDatosException si falla la base de datos
+     */
+    default List<HistorialPrecio> listarHistorialPrecios(int idProducto) {
+        throw new UnsupportedOperationException("Consulta de historial de precios no disponible");
+    }
 }

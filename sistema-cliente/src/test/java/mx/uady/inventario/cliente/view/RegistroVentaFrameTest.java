@@ -19,10 +19,9 @@ import javax.swing.SwingUtilities;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import mx.uady.inventario.cliente.model.MercanciaDTO;
 import mx.uady.inventario.cliente.model.TiendaDTO;
 import mx.uady.inventario.cliente.model.UsuarioDTO;
-import mx.uady.inventario.common.modelo.EstadoMercancia;
-import mx.uady.inventario.common.modelo.Mercancia;
 
 /**
  * Suite de pruebas de interfaz de usuario para {@link RegistroVentaFrame} en el Sistema Proveedor (Cliente).
@@ -31,7 +30,7 @@ import mx.uady.inventario.common.modelo.Mercancia;
  */
 class RegistroVentaFrameTest {
 
-    private static final Mercancia LAPTOP = new Mercancia("SN-CLI-001", 1, EstadoMercancia.EN_ALMACEN, "/app/storage/qr/SN-CLI-001.png");
+    private static final MercanciaDTO LAPTOP = new MercanciaDTO("SN-CLI-001", 1, "Laptop", "EN_ALMACEN");
     
     private static final TiendaDTO TIENDA;
     static {
@@ -114,7 +113,7 @@ class RegistroVentaFrameTest {
      */
     @Test
     void filtraMercanciaPorTexto() throws Exception {
-        Mercancia otra = new Mercancia("AB-CLI-002", 2, EstadoMercancia.EN_ALMACEN, null);
+        MercanciaDTO otra = new MercanciaDTO("AB-CLI-002", 2, "Monitor", "EN_ALMACEN");
         enEdt(() -> {
             frame.actualizarTablaMercancia(List.of(LAPTOP, otra));
             JTextField campoBusqueda = componente("txtBuscarMercancia", JTextField.class);

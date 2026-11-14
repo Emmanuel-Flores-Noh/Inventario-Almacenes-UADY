@@ -1,10 +1,13 @@
 package mx.uady.inventario.central;
 
+import java.nio.file.Path;
+
 import mx.uady.inventario.central.controller.AppContext;
 import mx.uady.inventario.central.controller.UiLauncher;
 import mx.uady.inventario.central.network.DespachadorSolicitudes;
 import mx.uady.inventario.central.network.RegistradorBroker;
 import mx.uady.inventario.central.network.ServidorServicio;
+import mx.uady.inventario.central.service.QrService;
 import mx.uady.inventario.central.util.ConfiguracionBD;
 import mx.uady.inventario.central.util.ConfiguracionServicio;
 
@@ -43,11 +46,14 @@ public class Main {
         }
 
         // La interfaz y el servidor de red comparten los mismos servicios sobre MariaDB.
-        AppContext contexto = AppContext.jdbc(configuracionBD, AppContext.directorioQr(System.getenv()));
+        Path directorioQr = AppContext.directorioQr(System.getenv());
+        AppContext contexto = AppContext.jdbc(configuracionBD, directorioQr);
         DespachadorSolicitudes despachador = DespachadorSolicitudes.estandar(
                 contexto.ventaService(),
                 contexto.consultasVenta(),
-                contexto.mercanciaService()
+                contexto.mercanciaService(),
+                contexto.productoService(),
+                new QrService(directorioQr)
         );
         ServidorServicio servidor = new ServidorServicio(
                 configuracion.puertoServicio(), configuracion.tamanoPool(), despachador);

@@ -17,6 +17,10 @@ import java.nio.charset.StandardCharsets;
  * <p>Se encarga de establecer la conexión con el Broker intermediario, serializar las solicitudes
  * a formato JSON utilizando la instancia global {@link GsonFactory#DEFAULT}, enviarlas mediante UTF-8 
  * (un mensaje por línea) y recibir la respuesta validando su integridad mediante el cotejo de identificadores únicos.</p>
+ *
+ * <p>No reintenta automáticamente: si se pierde la respuesta de una venta ya procesada, reenviarla
+ * podría intentar registrarla dos veces. Los reintentos acotados hacia el Sistema 1 los hace el Broker,
+ * y ante un fallo de red el controlador ofrece al usuario reintentar de forma explícita.</p>
  */
 public class ClienteTCP {
     private final String host;

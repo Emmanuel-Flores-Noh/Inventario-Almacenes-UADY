@@ -22,6 +22,22 @@ public interface ConsultasVentaService {
     /** Usuarios ordenados por nombre. */
     List<Usuario> listarUsuarios();
 
+    /** Nombre del rol (tabla {@code roles}) de los usuarios que operan el Sistema 2. */
+    String ROL_PROVEEDOR = "Proveedor Sistema 2";
+
+    /**
+     * Lista los usuarios con rol {@link #ROL_PROVEEDOR}, ordenados por nombre.
+     *
+     * <p>La implementación por defecto no está soportada; la versión sobre MariaDB la sobrescribe.</p>
+     *
+     * @return usuarios proveedores; lista vacía si no hay ninguno
+     * @throws UnsupportedOperationException si la implementación no ofrece esta consulta
+     * @throws AccesoDatosException si falla la base de datos
+     */
+    default List<Usuario> listarUsuariosProveedores() {
+        throw new UnsupportedOperationException("Consulta de usuarios proveedores no disponible");
+    }
+
     /** Nombre para mostrar: nombres y apellidos sin espacios de más. */
     static String nombreCompleto(Usuario usuario) {
         StringBuilder nombre = new StringBuilder(usuario.nombres());
