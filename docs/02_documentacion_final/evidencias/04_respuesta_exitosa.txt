@@ -1,0 +1,40 @@
+# Prueba 4: Respuesta exitosa
+Fecha (hora local del equipo): 2026-11-14 09:18:15
+Codigo: rama dev/chris, commit bb03b8c
+
+El cliente registra la venta de una unidad (CU2). El Sistema 1 la procesa en una transaccion y la
+respuesta incluye id de la solicitud, resultado, estado y fecha y hora.
+
+## gestorTiendas.actualizarTiendaVenta
+
+CLIENTE -> BROKER (localhost:5000)
+{
+  "idSolicitud": "ev-04",
+  "nombreServicio": "gestorTiendas",
+  "nombreOperacion": "actualizarTiendaVenta",
+  "parametros": {
+    "numero_serie": "SN-UADY-0003",
+    "id_tienda": 1,
+    "id_usuario": 2
+  },
+  "fechaHora": "2026-11-14T09:18:15.8278687"
+}
+BROKER -> CLIENTE (24 ms)
+{
+  "idSolicitud": "ev-04",
+  "resultado": {
+    "numero_serie": "SN-UADY-0003",
+    "id_tienda": 1,
+    "fecha_venta": "2026-11-14T15:18:15"
+  },
+  "estado": "EXITO",
+  "fechaHora": "2026-11-14T15:18:15.875516306"
+}
+Resumen: estado=EXITO
+
+Bitacora del Broker (docker logs uady-broker):
+[BROKER] 2026-11-14 15:18:15.876 [pool-1-thread-11] id=ev-04 gestorTiendas.actualizarTiendaVenta -> sistema-centralizado:6000 | EXITO | 8 ms
+
+Estado en la base de datos:
+numero_serie	estado	id_tienda	id_usuario	fecha_venta
+SN-UADY-0003	VENDIDO	1	2	2026-11-14 15:18:15
