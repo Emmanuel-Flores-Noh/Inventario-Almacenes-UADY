@@ -36,4 +36,16 @@ public final class ConsultasVentaJdbc implements ConsultasVentaService {
     public List<Usuario> listarUsuarios() {
         return transacciones.leer("consultar los usuarios", catalogo::listarUsuarios);
     }
+
+    /**
+     * Lista los usuarios con rol {@link ConsultasVentaService#ROL_PROVEEDOR} desde MariaDB.
+     *
+     * @return usuarios proveedores ordenados por nombre
+     * @throws mx.uady.inventario.central.service.AccesoDatosException si falla la base de datos
+     */
+    @Override
+    public List<Usuario> listarUsuariosProveedores() {
+        return transacciones.leer("consultar los usuarios proveedores",
+                c -> catalogo.listarUsuariosPorRol(c, ROL_PROVEEDOR));
+    }
 }

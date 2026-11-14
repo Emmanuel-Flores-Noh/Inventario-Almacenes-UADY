@@ -7,12 +7,11 @@ import mx.uady.inventario.common.contrato.Solicitud;
 import mx.uady.inventario.common.error.CodigoError;
 import mx.uady.inventario.common.servicio.Operaciones;
 import mx.uady.inventario.common.servicio.Servicios;
-import mx.uady.inventario.central.service.VentaService;
-
 import mx.uady.inventario.central.service.ConsultasVentaService;
 import mx.uady.inventario.central.service.MercanciaService;
-import mx.uady.inventario.common.modelo.EstadoMercancia;
-import mx.uady.inventario.common.json.GsonFactory;
+import mx.uady.inventario.central.service.ProductoService;
+import mx.uady.inventario.central.service.QrService;
+import mx.uady.inventario.central.service.VentaService;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -55,96 +54,68 @@ public class DespachadorSolicitudes {
      * @return el despachador con los servicios y operaciones del contrato
      */
     public static DespachadorSolicitudes estandar() {
-        return estandar(null);
+        return estandar(null, null, null, null, null);
     }
 
     /**
-     * Crea el despachador estándar conectando la operación de venta.
+     * Crea el despachador estándar conectando solo la operación de venta.
      *
      * @param ventaService servicio de venta; si es nulo, la operación queda pendiente
      * @return despachador con el catálogo estándar
      */
     public static DespachadorSolicitudes estandar(VentaService ventaService) {
-        DespachadorSolicitudes despachador = new DespachadorSolicitudes();
-        despachador.registrarServicio(Servicios.GESTOR_TIENDAS,
-                Operaciones.LISTAR_TIENDAS, Operaciones.ACTUALIZAR_TIENDA_VENTA);
-        despachador.registrarServicio(Servicios.INVENTARIO,
-                Operaciones.LISTAR_INVENTARIO);
-        despachador.registrarServicio(Servicios.GESTOR_PRECIOS,
-                Operaciones.LISTAR_PRECIOS_PRODUCTO);
-        if (ventaService != null) {
-            despachador.registrarOperacion(
-                    Servicios.GESTOR_TIENDAS,
-                    Operaciones.ACTUALIZAR_TIENDA_VENTA,
-                    ventaService::registrarVenta
-            );
-        }
-        return despachador;
+        return estandar(ventaService, null, null, null, null);
     }
 
-
     /**
-     * Crea el despachador estándar conectando la operación de venta.
+     * Crea el despachador con el catálogo completo y conecta cada operación cuyo servicio
+     * se proporcione. Un servicio nulo deja sus operaciones declaradas pero pendientes.
      *
-     * @param ventaService servicio de venta; si es nulo, la operación queda pendiente
-     * @param consultasVentaService servicio de consulta de ventas; si es nulo, la operación queda pendiente
-     * @param mercanciaService servicio de mercancia; si es nulo, la operación queda pendiente
+     * @param ventaService     registra ventas ({@code actualizarTiendaVenta})
+     * @param consultasVenta   catálogos de tiendas y usuarios ({@code listarTiendas}, {@code listarUsuarios})
+     * @param mercanciaService unidades físicas ({@code listarInventario}, {@code obtenerQr})
+     * @param productoService  productos; necesario para nombres y precios
+     *                         ({@code listarInventario}, {@code obtenerQr}, {@code listarPreciosProducto})
+     * @param qrService        lectura de los PNG ({@code obtenerQr})
      * @return despachador con el catálogo estándar
      */
     public static DespachadorSolicitudes estandar(
             VentaService ventaService,
-            ConsultasVentaService consultasVentaService,
-            MercanciaService mercanciaService) {
-        
+            ConsultasVentaService consultasVenta,
+            MercanciaService mercanciaService,
+            ProductoService productoService,
+            QrService qrService) {
+
         DespachadorSolicitudes despachador = new DespachadorSolicitudes();
-        
         despachador.registrarServicio(Servicios.GESTOR_TIENDAS,
-                Operaciones.LISTAR_TIENDAS, Operaciones.ACTUALIZAR_TIENDA_VENTA, "listarUsuarios");
+                Operaciones.LISTAR_TIENDAS, Operaciones.ACTUALIZAR_TIENDA_VENTA, Operaciones.LISTAR_USUARIOS);
         despachador.registrarServicio(Servicios.INVENTARIO,
-                Operaciones.LISTAR_INVENTARIO);
+                Operaciones.LISTAR_INVENTARIO, Operaciones.OBTENER_QR);
         despachador.registrarServicio(Servicios.GESTOR_PRECIOS,
                 Operaciones.LISTAR_PRECIOS_PRODUCTO);
-        
+
         if (ventaService != null) {
-            despachador.registrarOperacion(
-                    Servicios.GESTOR_TIENDAS,
-                    Operaciones.ACTUALIZAR_TIENDA_VENTA,
-                    ventaService::registrarVenta
-            );
+            despachador.registrarOperacion(Servicios.GESTOR_TIENDAS,
+                    Operaciones.ACTUALIZAR_TIENDA_VENTA, ventaService::registrarVenta);
         }
-
-        if (consultasVentaService != null) {
-            despachador.registrarOperacion(
-                    Servicios.GESTOR_TIENDAS,
-                    Operaciones.LISTAR_TIENDAS,
-                    params -> GsonFactory.DEFAULT.toJsonTree(consultasVentaService.listarTiendas())
-            );
-
-            despachador.registrarOperacion(
-                    Servicios.GESTOR_TIENDAS,
-                    Operaciones.LISTAR_USUARIOS,
-                    params -> {
-                        final int ID_ROL_PROVEEDOR = 2; 
-
-                        var proveedores = consultasVentaService.listarUsuarios().stream()
-                                .filter(u -> u.idRol() == ID_ROL_PROVEEDOR)
-                                .toList();
-                        return GsonFactory.DEFAULT.toJsonTree(proveedores);
-                    }
-            );
+        if (consultasVenta != null) {
+            despachador.registrarOperacion(Servicios.GESTOR_TIENDAS,
+                    Operaciones.LISTAR_TIENDAS, ManejadoresConsulta.listarTiendas(consultasVenta));
+            despachador.registrarOperacion(Servicios.GESTOR_TIENDAS,
+                    Operaciones.LISTAR_USUARIOS, ManejadoresConsulta.listarUsuariosProveedores(consultasVenta));
         }
-
-        if (mercanciaService != null) {
-            despachador.registrarOperacion(
-                    Servicios.INVENTARIO,
-                    Operaciones.LISTAR_INVENTARIO,
-                    params -> {
-                        var disponibles = mercanciaService.listar(null, EstadoMercancia.EN_ALMACEN);
-                        return GsonFactory.DEFAULT.toJsonTree(disponibles);
-                    }
-            );
+        if (mercanciaService != null && productoService != null) {
+            despachador.registrarOperacion(Servicios.INVENTARIO, Operaciones.LISTAR_INVENTARIO,
+                    ManejadoresConsulta.listarInventarioDisponible(mercanciaService, productoService));
+            if (qrService != null) {
+                despachador.registrarOperacion(Servicios.INVENTARIO, Operaciones.OBTENER_QR,
+                        ManejadoresConsulta.obtenerQr(mercanciaService, productoService, qrService));
+            }
         }
-
+        if (productoService != null) {
+            despachador.registrarOperacion(Servicios.GESTOR_PRECIOS, Operaciones.LISTAR_PRECIOS_PRODUCTO,
+                    ManejadoresConsulta.listarPreciosProducto(productoService));
+        }
         return despachador;
     }
 

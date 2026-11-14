@@ -4,7 +4,7 @@ import com.formdev.flatlaf.FlatClientProperties;
 import mx.uady.inventario.cliente.controller.RegistroVentaController;
 import mx.uady.inventario.cliente.model.TiendaDTO;
 import mx.uady.inventario.cliente.model.UsuarioDTO;
-import mx.uady.inventario.common.modelo.Mercancia;
+import mx.uady.inventario.cliente.model.MercanciaDTO;
 import mx.uady.inventario.cliente.view.components.QrPreviewDialog;
 
 import javax.swing.*;
@@ -13,6 +13,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -35,6 +36,8 @@ public class RegistroVentaFrame extends JFrame {
 
     private final RegistroVentaController controller;
     private QrPreviewDialog qrDialogActual;
+    /** Unidades mostradas en la tabla, en el mismo orden que las filas del modelo. */
+    private final List<MercanciaDTO> unidadesEnTabla = new ArrayList<>();
 
     /**
      * Constructor principal que inicializa el controlador asociado, configura la ventana 
@@ -131,7 +134,7 @@ public class RegistroVentaFrame extends JFrame {
      * @return Contenedor {@link JScrollPane} que envuelve la tabla de mercancía.
      */
     private JScrollPane crearPanelCentro() {
-        String[] columnas = {"N° Serie", "ID Producto", "Estado"};
+        String[] columnas = {"N° Serie", "Producto", "Estado"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -232,40 +235,63 @@ public class RegistroVentaFrame extends JFrame {
                 return;
             }
 
-            int filaModelo = tablaMercancia.convertRowIndexToModel(filaSeleccionadaVista);
-
-            String numeroSerie = (String) modeloTabla.getValueAt(filaModelo, 0);
+            MercanciaDTO unidad = unidadEnFila(filaSeleccionadaVista);
             TiendaDTO tiendaSeleccionada = (TiendaDTO) comboTiendas.getSelectedItem();
             UsuarioDTO usuarioSeleccionado = (UsuarioDTO) comboUsuarios.getSelectedItem();
 
-            Long idTienda = tiendaSeleccionada != null ? tiendaSeleccionada.getIdTienda() : null;
-            Long idUsuario = usuarioSeleccionado != null ? usuarioSeleccionado.getIdUsuario() : null;
-
-            controller.ejecutarRegistroVenta(numeroSerie, idTienda, idUsuario);
+            controller.ejecutarRegistroVenta(unidad.getNumeroSerie(), unidad.getNombreProducto(),
+                    tiendaSeleccionada, usuarioSeleccionado);
         });
     }
 
     /**
-     * Abre el diálogo modal del código QR correspondiente a la fila seleccionada en la tabla.
-     * Garantiza que si ya existe un modal abierto, este se cierre antes de desplegar el nuevo 
-     * para cumplir estrictamente con la regla de mantener una única instancia activa.
+     * Solicita al controlador el código QR de la unidad seleccionada en la tabla.
+     * La imagen se obtiene del Sistema 1 a través del Broker y se muestra con {@link #mostrarQr}.
      */
     private void abrirModalQrSeleccionado() {
         int filaSeleccionadaVista = tablaMercancia.getSelectedRow();
         if (filaSeleccionadaVista != -1) {
-            int filaModelo = tablaMercancia.convertRowIndexToModel(filaSeleccionadaVista);
-            
-            String numeroSerie = (String) modeloTabla.getValueAt(filaModelo, 0);
-            int idProducto = (int) modeloTabla.getValueAt(filaModelo, 1);
-            String rutaQr = "/app/storage/qr/" + numeroSerie + ".png";
-
-            if (qrDialogActual != null && qrDialogActual.isVisible()) {
-                qrDialogActual.dispose();
-            }
-
-            qrDialogActual = new QrPreviewDialog(this, numeroSerie, idProducto, rutaQr);
-            qrDialogActual.setVisible(true);
+            controller.consultarQr(unidadEnFila(filaSeleccionadaVista).getNumeroSerie());
         }
+    }
+
+    /**
+     * Obtiene la unidad correspondiente a una fila visible de la tabla, considerando el filtro activo.
+     *
+     * @param filaVista índice de la fila en la vista (no en el modelo)
+     * @return unidad de mercancía mostrada en esa fila
+     */
+    private MercanciaDTO unidadEnFila(int filaVista) {
+        return unidadesEnTabla.get(tablaMercancia.convertRowIndexToModel(filaVista));
+    }
+
+    /**
+     * Muestra el diálogo con el código QR de una unidad. Si ya hay un diálogo abierto, lo cierra
+     * antes para mantener una única instancia activa.
+     *
+     * @param numeroSerie    número de serie de la unidad
+     * @param idProducto     identificador del producto
+     * @param nombreProducto nombre del producto; puede ser nulo
+     * @param png            bytes de la imagen PNG del QR
+     */
+    public void mostrarQr(String numeroSerie, int idProducto, String nombreProducto, byte[] png) {
+        if (qrDialogActual != null && qrDialogActual.isVisible()) {
+            qrDialogActual.dispose();
+        }
+        qrDialogActual = new QrPreviewDialog(this, numeroSerie, idProducto, nombreProducto, png);
+        qrDialogActual.setVisible(true);
+    }
+
+    /**
+     * Deja el formulario en su estado inicial: sin unidad seleccionada, sin tienda ni usuario
+     * elegidos y sin texto de búsqueda.
+     */
+    public void limpiarFormulario() {
+        tablaMercancia.clearSelection();
+        comboTiendas.setSelectedIndex(-1);
+        comboUsuarios.setSelectedIndex(-1);
+        txtBuscarMercancia.setText("");
+        validarFormulario();
     }
 
     /**
@@ -275,31 +301,46 @@ public class RegistroVentaFrame extends JFrame {
      * @param usuarios Lista de objetos {@link UsuarioDTO} a mostrar en el selector correspondiente.
      */
     public void actualizarListasCombos(List<TiendaDTO> tiendas, List<UsuarioDTO> usuarios) {
+        TiendaDTO tiendaPrevia = (TiendaDTO) comboTiendas.getSelectedItem();
+        UsuarioDTO usuarioPrevio = (UsuarioDTO) comboUsuarios.getSelectedItem();
+
         comboTiendas.removeAllItems();
+        int indiceTienda = -1;
         for (TiendaDTO t : tiendas) {
             comboTiendas.addItem(t);
+            if (tiendaPrevia != null && java.util.Objects.equals(t.getIdTienda(), tiendaPrevia.getIdTienda())) {
+                indiceTienda = comboTiendas.getItemCount() - 1;
+            }
         }
+        comboTiendas.setSelectedIndex(indiceTienda);
 
         comboUsuarios.removeAllItems();
+        int indiceUsuario = -1;
         for (UsuarioDTO u : usuarios) {
             comboUsuarios.addItem(u);
+            if (usuarioPrevio != null && java.util.Objects.equals(u.getIdUsuario(), usuarioPrevio.getIdUsuario())) {
+                indiceUsuario = comboUsuarios.getItemCount() - 1;
+            }
         }
+        comboUsuarios.setSelectedIndex(indiceUsuario);
         validarFormulario();
     }
 
     /**
-     * Actualiza la tabla principal con las unidades de mercancía disponibles, 
+     * Actualiza la tabla principal con las unidades de mercancía disponibles,
      * indicando la disponibilidad de consulta QR mediante doble clic.
-     * 
-     * @param listaMercancia Lista de objetos {@link Mercancia} a desplegar en la tabla principal.
+     *
+     * @param listaMercancia Lista de objetos {@link MercanciaDTO} a desplegar en la tabla principal.
      */
-    public void actualizarTablaMercancia(List<Mercancia> listaMercancia) {
+    public void actualizarTablaMercancia(List<MercanciaDTO> listaMercancia) {
+        unidadesEnTabla.clear();
         modeloTabla.setRowCount(0);
-        for (Mercancia m : listaMercancia) {
+        for (MercanciaDTO m : listaMercancia) {
+            unidadesEnTabla.add(m);
             modeloTabla.addRow(new Object[]{
-                m.numeroSerie(),
-                m.idProducto(),
-                m.estado(),
+                m.getNumeroSerie(),
+                m.getNombreProducto(),
+                m.getEstado(),
             });
         }
         validarFormulario();

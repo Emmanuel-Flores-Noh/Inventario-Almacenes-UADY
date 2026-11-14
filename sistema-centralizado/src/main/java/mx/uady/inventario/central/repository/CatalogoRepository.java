@@ -18,6 +18,11 @@ public class CatalogoRepository {
     private static final String USUARIOS =
             "SELECT id_usuario, id_rol, nombres, apellido_paterno, apellido_materno FROM usuarios "
                     + "ORDER BY nombres, apellido_paterno, id_usuario";
+    private static final String USUARIOS_POR_ROL =
+            "SELECT u.id_usuario, u.id_rol, u.nombres, u.apellido_paterno, u.apellido_materno "
+                    + "FROM usuarios u JOIN roles r ON r.id_rol = u.id_rol "
+                    + "WHERE r.nombre_rol = ? "
+                    + "ORDER BY u.nombres, u.apellido_paterno, u.id_usuario";
 
     public List<TiendaAlmacen> listarTiendas(Connection conexion) throws SQLException {
         try (PreparedStatement sentencia = conexion.prepareStatement(TIENDAS);
@@ -34,13 +39,41 @@ public class CatalogoRepository {
     public List<Usuario> listarUsuarios(Connection conexion) throws SQLException {
         try (PreparedStatement sentencia = conexion.prepareStatement(USUARIOS);
              ResultSet filas = sentencia.executeQuery()) {
-            List<Usuario> usuarios = new ArrayList<>();
-            while (filas.next()) {
-                usuarios.add(new Usuario(filas.getInt("id_usuario"), filas.getInt("id_rol"),
-                        filas.getString("nombres"), filas.getString("apellido_paterno"),
-                        filas.getString("apellido_materno")));
-            }
-            return usuarios;
+            return leerUsuarios(filas);
         }
+    }
+
+    /**
+     * Lista los usuarios cuyo rol tiene el nombre indicado, ordenados por nombre.
+     *
+     * @param conexion  conexión abierta a MariaDB
+     * @param nombreRol nombre exacto del rol en la tabla {@code roles}
+     * @return usuarios con ese rol; lista vacía si no hay ninguno
+     * @throws SQLException si la consulta falla
+     */
+    public List<Usuario> listarUsuariosPorRol(Connection conexion, String nombreRol) throws SQLException {
+        try (PreparedStatement sentencia = conexion.prepareStatement(USUARIOS_POR_ROL)) {
+            sentencia.setString(1, nombreRol);
+            try (ResultSet filas = sentencia.executeQuery()) {
+                return leerUsuarios(filas);
+            }
+        }
+    }
+
+    /**
+     * Convierte las filas de una consulta de usuarios en objetos {@link Usuario}.
+     *
+     * @param filas resultado posicionado antes de la primera fila
+     * @return usuarios leídos en el orden de la consulta
+     * @throws SQLException si falla la lectura de alguna columna
+     */
+    private static List<Usuario> leerUsuarios(ResultSet filas) throws SQLException {
+        List<Usuario> usuarios = new ArrayList<>();
+        while (filas.next()) {
+            usuarios.add(new Usuario(filas.getInt("id_usuario"), filas.getInt("id_rol"),
+                    filas.getString("nombres"), filas.getString("apellido_paterno"),
+                    filas.getString("apellido_materno")));
+        }
+        return usuarios;
     }
 }
